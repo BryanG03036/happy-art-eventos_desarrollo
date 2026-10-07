@@ -3,7 +3,9 @@ guardarEdicionContrato()/borrarContrato()/borrarExtraExistente()/
 abrirProgramarPersonal()/guardarProgramacionPersonal() en main.js."""
 import re
 
-from app.models import PAQUETES, ROLES_PERSONAL, telefono_valido
+from app.models import (
+    PAQUETES, ROLES_PERSONAL, contratos_ocupado_en_fecha, esta_disponible, get_persona, telefono_valido,
+)
 from app.services.calculos import puede_editar_contrato
 from app.services.ventas import get_paquete
 from app.services.calculos import resolver_items_paquete_inventario
@@ -178,6 +180,23 @@ def precargar_variantes_desde_contrato(productos, pk, descontados_paquete):
     return sel
 
 
+def _validar_personal_nuevo(state, c, ids_nuevos):
+    """Reglas de la programación que no pueden depender solo de la pantalla:
+    la persona debe existir, estar disponible esa fecha y no estar ya
+    programada en otro evento el mismo día."""
+    fecha = c.get("fecha")
+    for pid in ids_nuevos:
+        persona = get_persona(state["personal"], pid)
+        if persona is None:
+            raise ValidationError("Una de las personas seleccionadas ya no existe en el sistema")
+        if not esta_disponible(persona, fecha):
+            raise ValidationError(f"{persona['nombre']} está marcado como no disponible el {fecha}")
+        otros = contratos_ocupado_en_fecha(state["contratos"], pid, fecha, c.get("id"))
+        if otros:
+            cliente = otros[0].get("cliente") or "otro cliente"
+            raise ValidationError(f"{persona['nombre']} ya está programado el {fecha} en el evento de {cliente}")
+
+
 def programar_personal(state, contrato_id, selecciones):
     """selecciones: {rolId: [personalId, ...]} (checkboxes marcados por rol)."""
     c = get_contrato(state, contrato_id)
@@ -186,6 +205,8 @@ def programar_personal(state, contrato_id, selecciones):
     todos = [pid for slots in selecciones.values() for pid in slots if pid]
     if len(set(todos)) != len(todos):
         raise ValidationError("No puedes asignar la misma persona en dos cupos del mismo evento")
+    previos = {pid for ids in (c.get("personalAsignado") or {}).values() for pid in (ids or [])}
+    _validar_personal_nuevo(state, c, [pid for pid in todos if pid not in previos])
     req = c.get("personalRequerido") or {}
     for rol in ROLES_PERSONAL:
         necesarios = int(req.get(rol["id"]) or 0)

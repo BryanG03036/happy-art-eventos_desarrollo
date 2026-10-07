@@ -5,7 +5,9 @@ aunque no se programa por evento), número de cuenta de pago, y el campo de
 disponibilidad renombrado a noDisponible."""
 import time
 
-from app.models import ROLES_PERSONAL, telefono_valido
+from datetime import datetime
+
+from app.models import ROLES_PERSONAL, contratos_ocupado_en_fecha, telefono_valido
 
 
 class ValidationError(Exception):
@@ -67,6 +69,17 @@ def marcar_no_disponible(state, id_, fecha):
     p = next((x for x in state["personal"] if x["id"] == id_), None)
     if not p:
         raise ValidationError("Personal no encontrado")
+    try:
+        datetime.strptime(fecha, "%Y-%m-%d")
+    except (TypeError, ValueError):
+        raise ValidationError("La fecha no es válida")
+    ocupado = contratos_ocupado_en_fecha(state["contratos"], id_, fecha)
+    if ocupado:
+        cliente = ocupado[0].get("cliente") or "otro cliente"
+        raise ValidationError(
+            f"{p['nombre']} ya está programado ese día en el evento de {cliente}. "
+            "Quítalo de la programación antes de marcarlo como no disponible."
+        )
     p.setdefault("noDisponible", [])
     if fecha not in p["noDisponible"]:
         p["noDisponible"].append(fecha)
