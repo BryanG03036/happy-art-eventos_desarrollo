@@ -4,3 +4,8 @@ __pycache__/
 venv/
 *.env
 .env
+
+*adminsdk*.json
+*firebase-key*.json
+.venv/
+__pycache__/
