@@ -31,3 +31,7 @@ DB_PATH = os.environ.get("DB_PATH", "eventstock_v2")
 SESSION_SECRET_KEY = os.environ.get("SESSION_SECRET_KEY", "dev-secret-change-me-in-production")
 
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "development")
+
+# Segundos que se reutiliza el estado leído de Firebase antes de volver a
+# consultarlo (0 desactiva la caché). Todo guardado actualiza la caché.
+STATE_CACHE_TTL = float(os.environ.get("STATE_CACHE_TTL", "10"))

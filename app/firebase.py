@@ -6,8 +6,10 @@ crear/consultar usuarios y verificar tokens ya emitidos).
 Este módulo reemplaza lo que en el proyecto original hacían directamente
 initializeApp/getDatabase/getAuth en el navegador (js/operations.js).
 """
+import copy
 import json
 import threading
+import time
 
 import firebase_admin
 import httpx
@@ -55,7 +57,37 @@ def get_root_ref():
     return db.reference(config.DB_PATH)
 
 
+_cache = {"estado": None, "ts": 0.0}
+_cache_lock = threading.Lock()
+
+
+def invalidar_cache() -> None:
+    with _cache_lock:
+        _cache["estado"] = None
+
+
 def get_state() -> dict:
+    """Devuelve el estado completo, reutilizando una copia reciente (ver
+    config.STATE_CACHE_TTL) para no descargar toda la base en cada petición.
+    Siempre entrega una copia: quien la modifique no altera la caché hasta que
+    llame a save_state()."""
+    ttl = config.STATE_CACHE_TTL
+    with _cache_lock:
+        vigente = (
+            ttl > 0
+            and _cache["estado"] is not None
+            and time.monotonic() - _cache["ts"] < ttl
+        )
+        if vigente:
+            return copy.deepcopy(_cache["estado"])
+    estado = _leer_estado_remoto()
+    with _cache_lock:
+        _cache["estado"] = copy.deepcopy(estado)
+        _cache["ts"] = time.monotonic()
+    return estado
+
+
+def _leer_estado_remoto() -> dict:
     """Lee el bloque completo de datos, igual que cargarDatosIniciales() en
     operations.js. Devuelve un dict con listas ya normalizadas (Firebase RTDB
     guarda arrays como objetos con claves numéricas cuando hay huecos)."""
@@ -92,7 +124,14 @@ def save_state(state: dict) -> None:
     documento de requerimientos no funcionales: esto significa que dos
     guardados casi simultáneos pueden pisarse entre sí; es una limitación
     heredada tal cual del diseño original, no algo nuevo de este backend."""
-    get_root_ref().set(state)
+    try:
+        get_root_ref().set(state)
+    except Exception:
+        invalidar_cache()
+        raise
+    with _cache_lock:
+        _cache["estado"] = copy.deepcopy(state)
+        _cache["ts"] = time.monotonic()
 
 
 def sign_in_with_password(email: str, password: str) -> str:
