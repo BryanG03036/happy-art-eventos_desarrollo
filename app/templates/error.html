@@ -1,6 +1,12 @@
 {% extends "base.html" %}
-{% block title %}Sin acceso — EventStock{% endblock %}
+{% block title %}{{ titulo|default("Sin acceso") }} — EventStock{% endblock %}
 {% block content %}
 <div class="alert alert-danger">🚫 {{ mensaje }}</div>
 <a href="/" class="btn btn-secondary btn-sm">Volver</a>
+{% endblock %}
+{% block content_noauth %}
+<div class="container py-5" style="max-width: 640px;">
+  <div class="alert alert-danger">{{ mensaje }}</div>
+  <a href="/" class="btn btn-secondary btn-sm">Volver al inicio</a>
+</div>
 {% endblock %}

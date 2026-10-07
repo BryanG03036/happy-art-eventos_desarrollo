@@ -53,3 +53,16 @@ def forbidden_handler(request: Request, exc):
     return templates.TemplateResponse(
         request, "error.html", {"mensaje": str(exc.detail)}, status_code=403
     )
+
+
+@app.exception_handler(Exception)
+def error_inesperado_handler(request: Request, exc: Exception):
+    import logging
+
+    logging.getLogger("eventstock").error("Error inesperado en %s", request.url.path, exc_info=exc)
+    return templates.TemplateResponse(
+        request,
+        "error.html",
+        {"titulo": "Error inesperado", "mensaje": "Ocurrió un error inesperado. Intenta de nuevo en un momento; si persiste, avisa al administrador."},
+        status_code=500,
+    )
