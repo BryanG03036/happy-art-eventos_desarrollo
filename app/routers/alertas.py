@@ -3,6 +3,7 @@ renderAlertas()."""
 from fastapi import APIRouter, Depends, Request
 
 from app import firebase, models
+from app.services import integridad
 from app.deps import require_admin_o_bodega, templates
 
 router = APIRouter()
@@ -17,4 +18,5 @@ def ver_alertas(request: Request, user=Depends(require_admin_o_bodega)):
     )
     return templates.TemplateResponse(request, "alertas.html", {
         "user": user, "active_view": "alertas", "productos": lista,
+        "inconsistencias": integridad.verificar(state),
     })

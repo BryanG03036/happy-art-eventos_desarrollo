@@ -4,6 +4,15 @@
 <h3 class="fw-bold">Alertas de stock ⚠️</h3>
 <div class="text-muted mb-3">Artículos que necesitan reposición urgente</div>
 
+{% if inconsistencias %}
+<div class="alert alert-danger">
+  <div class="fw-bold mb-1">Revisión de datos: {{ inconsistencias|length }} inconsistencia(s)</div>
+  <ul class="mb-0 small">
+    {% for i in inconsistencias %}<li>{{ i.mensaje }}</li>{% endfor %}
+  </ul>
+</div>
+{% endif %}
+
 {% if not productos %}
 <div class="text-center text-muted py-5">
   <div class="display-4">🎉</div>
