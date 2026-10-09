@@ -1,3 +1,7 @@
+"""Dependencias compartidas de FastAPI: plantillas Jinja2 y control de acceso
+por sesión (equivalente a onAuthStateChanged + obtenerRol() del SPA original,
+pero verificado en el servidor en cada request en vez de mantenerse en el
+cliente)."""
 from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
@@ -10,6 +14,7 @@ templates = Jinja2Templates(directory="app/templates")
 templates.env.globals["fmt"] = models.fmt
 templates.env.globals["fmt_precio"] = models.fmt_precio
 templates.env.globals["valor_total_contrato"] = models.valor_total_contrato
+templates.env.globals["nombre_paquete_empresa"] = models.nombre_paquete_empresa
 templates.env.globals["fmt_date"] = models.fmt_date
 templates.env.globals["fmt_fecha"] = models.fmt_fecha
 templates.env.globals["fmt_hora_evento"] = models.fmt_hora_evento

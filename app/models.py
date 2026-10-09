@@ -1,3 +1,16 @@
+"""Helpers puros de dominio, portados de legacy/js/models.js.
+
+En el SPA original estas funciones leían un objeto `state` global mutable
+mantenido en memoria del navegador y sincronizado en vivo con Firebase. Aquí,
+siguiendo la arquitectura sin estado por-request de app/firebase.py, cada
+función recibe explícitamente las listas/dicts que necesita (obtenidas de
+firebase.get_state() al inicio de cada request) en vez de leer un global.
+
+Los datos constantes (catálogos, roles, etc.) se cargaron en
+app/data/catalog.json mediante una extracción directa desde el
+legacy/js/models.js original (import dinámico + volcado a JSON), para
+garantizar que coinciden exactamente con el original.
+"""
 import json
 import re
 import unicodedata
@@ -8,7 +21,9 @@ _catalog = json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))
 
 ROLES = _catalog["ROLES"]
 ROLES_PERSONAL = _catalog["ROLES_PERSONAL"]
-
+# Personal que se asigna por cupos a un evento (logístico/recreador/coordinador/
+# operario). "asesor" no se programa por evento, pero sí se registra como
+# integrante del staff en la sección Personal — de ahí ROLES_PERSONAL_STAFF.
 ROLES_PERSONAL_STAFF = ROLES_PERSONAL + [_catalog["ROL_PERSONAL_STAFF_EXTRA"]]
 CUENTAS_PAGO = _catalog["CUENTAS_PAGO"]
 RECUPERABLES_KEYWORDS = _catalog["RECUPERABLES_KEYWORDS"]
@@ -146,9 +161,9 @@ def resolver_personal_asignado(personal, c):
     return grupos
 
 
-# Programacion por horario: el personal debe estar en bodega 3 horas antes
+# ── Programación por horario: el personal debe estar en bodega 3 horas antes
 # del inicio más temprano del evento (decoración si aplica; si no, la hora de
-# inicio de la recreación/animacion)
+# inicio de la recreación/animación). ──────────────────────────────────────
 
 def _minutos_desde_hora(time_str):
     if not time_str:
@@ -280,6 +295,7 @@ def _buscar_especificacion(item_name):
 # ── Formato de números / fechas ─────────────────────────────────────────────
 
 def _miles_es_co(n):
+    """Separador de miles con punto, como Number.toLocaleString('es-CO')."""
     entero = int(round(float(n)))
     return f"{entero:,}".replace(",", ".")
 
@@ -289,6 +305,7 @@ def fmt(n):
 
 
 def _parse_fecha(d):
+    """Convierte d a datetime; devuelve None si no se puede interpretar."""
     import re
     from datetime import datetime
 
@@ -330,8 +347,22 @@ def fmt_precio(n):
 
 
 def valor_total_contrato(c):
-
+    """Valor del paquete + transporte intermunicipal (si aplica) — es lo que
+    se muestra como 'Valor del Paquete' en el contrato impreso."""
     return (float(c.get("valor") or 0)) + (float(c.get("transporte") or 0))
+
+
+def nombre_paquete_empresa(c):
+    """Nombre comercial del paquete según la empresa del contrato.
+
+    El contrato guarda el nombre interno (el de Happy Art); Conde Eventos
+    vende los mismos paquetes con otro nombre (nombreConde), que es el que
+    el cliente vio al comprar y el que debe ir en su contrato."""
+    nombre = c.get("paquete") or ""
+    pk = next((p for p in PAQUETES if nombre in (p["nombre"], p.get("nombreHappy"), p.get("nombreConde"))), None)
+    if not pk:
+        return nombre
+    return pk.get("nombreConde") if c.get("empresa") == "conde" else pk.get("nombreHappy") or pk["nombre"]
 
 
 def fmt_fecha_contrato(date_str):
@@ -358,6 +389,9 @@ def usuario_asesor(email):
 
 
 def fecha_venta_contrato(c):
+    """Fecha en que se VENDIÓ el contrato (cuando el asesor lo registró). Si
+    algún contrato antiguo no tiene fechaRegistro, se usa la fecha del evento
+    como respaldo."""
     from datetime import datetime
 
     if c.get("fechaRegistro"):
@@ -369,6 +403,8 @@ def fecha_venta_contrato(c):
 
 
 def fecha_evento_contrato(c):
+    """Fecha en que SE REALIZA el evento (c.fecha), distinta de la fecha de
+    venta: se usa para saber en qué mes/quincena cae el evento."""
     from datetime import datetime
 
     if c.get("fecha"):
@@ -383,6 +419,8 @@ def quincena_de_fecha(fecha):
 
 
 def evento_realizado(c, ahora=None):
+    """¿Ya pasó la fecha del evento? Se valida contra la fecha actual,
+    comparando solo el día, para que un evento "hoy" cuente como realizado."""
     from datetime import date
 
     f = fecha_evento_contrato(c)
