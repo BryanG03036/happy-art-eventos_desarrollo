@@ -2,7 +2,9 @@
 (admin) y descarga de PDF. Portado de la vista view-contratos y sus
 funciones en legacy/js/main.js."""
 import io
+import unicodedata
 import zipfile
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
@@ -19,6 +21,18 @@ from app.services.calculos import puede_editar_contrato
 from app.services.pdf import generar_pdf_contrato, nombre_archivo_pdf
 
 router = APIRouter()
+
+
+def _content_disposition(tipo, filename):
+    """Cabecera Content-Disposition segura para cualquier nombre de cliente.
+
+    Las cabeceras HTTP solo admiten latin-1: un nombre con el apóstrofo
+    tipográfico (’) de los teclados de celular hacía fallar la respuesta
+    (error 500) y las tildes llegaban dañadas al navegador. Se envía un
+    nombre ASCII de respaldo y el nombre real en UTF-8 (RFC 6266 / 5987)."""
+    ascii_ = unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode("ascii")
+    ascii_ = ascii_.replace('"', "").replace("\\", "") or "contrato.pdf"
+    return f"{tipo}; filename=\"{ascii_}\"; filename*=UTF-8''{quote(filename, safe='')}"
 
 
 def _con_permiso(state, c, user):
@@ -71,7 +85,7 @@ def descargar_pdf(id: int, request: Request, user=Depends(require_login)):
     pdf_bytes = generar_pdf_contrato(c)
     filename = nombre_archivo_pdf(c)
     return Response(content=pdf_bytes, media_type="application/pdf", headers={
-        "Content-Disposition": f'inline; filename="{filename}"'
+        "Content-Disposition": _content_disposition("inline", filename)
     })
 
 
