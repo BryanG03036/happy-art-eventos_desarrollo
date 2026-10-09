@@ -1,6 +1,3 @@
-"""CRUD y programación de personal de Contratos, portado de editarContrato()/
-guardarEdicionContrato()/borrarContrato()/borrarExtraExistente()/
-abrirProgramarPersonal()/guardarProgramacionPersonal() en main.js."""
 import re
 
 from app.models import (
@@ -130,10 +127,6 @@ def borrar_contrato(state, contrato_id, es_admin, email):
 
 
 def items_iniciales_contrato(c, pk_actual):
-    """Ítems del paquete (sin los extras) tal como quedaron guardados en el
-    contrato — para que al editar se vea lo que ya se había quitado antes,
-    en vez de reaparecer los ítems originales del catálogo. Portado de la
-    inicialización de _ecItemsPaquete en editarContrato()."""
     if not pk_actual:
         return []
     extras_len = len(c.get("extras") or [])
@@ -145,10 +138,6 @@ def items_iniciales_contrato(c, pk_actual):
 
 
 def precargar_variantes_desde_contrato(productos, pk, descontados_paquete):
-    """Empareja lo ya guardado en c.descontadosPaquete con las opciones de
-    cada variante pendiente del paquete, para no exigir reconfirmar
-    variantes que ya estaban correctamente elegidas. Portado de
-    _precargarVariantesDesdeContrato() en main.js."""
     from app.services.ventas import pendientes_variante_paquete
     def _match(o, nom_base, sku_part):
         if sku_part:
@@ -181,9 +170,6 @@ def precargar_variantes_desde_contrato(productos, pk, descontados_paquete):
 
 
 def _validar_personal_nuevo(state, c, ids_nuevos):
-    """Reglas de la programación que no pueden depender solo de la pantalla:
-    la persona debe existir, estar disponible esa fecha y no estar ya
-    programada en otro evento el mismo día."""
     fecha = c.get("fecha")
     for pid in ids_nuevos:
         persona = get_persona(state["personal"], pid)
@@ -198,7 +184,6 @@ def _validar_personal_nuevo(state, c, ids_nuevos):
 
 
 def programar_personal(state, contrato_id, selecciones):
-    """selecciones: {rolId: [personalId, ...]} (checkboxes marcados por rol)."""
     c = get_contrato(state, contrato_id)
     if not c:
         raise ValidationError("Contrato no encontrado")

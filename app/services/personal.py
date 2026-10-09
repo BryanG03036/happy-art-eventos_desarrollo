@@ -1,8 +1,3 @@
-"""CRUD de personal y disponibilidad por fecha, portado de
-guardarPersonal/eliminarPersonal/marcarNoDisponible/quitarNoDisponible del
-Happy Art.zip (sprint 3): incluye el rol "asesor" (se registra como staff,
-aunque no se programa por evento), número de cuenta de pago, y el campo de
-disponibilidad renombrado a noDisponible."""
 import time
 
 from datetime import datetime

@@ -1,6 +1,3 @@
-"""Encuestas de satisfacción — carga desde plantilla Excel (Microsoft Forms) y
-agregación por fecha, portado de cargarPlantillaEncuestas()/renderEncuestas()
-en legacy/js/main.js. Usa openpyxl en vez de SheetJS."""
 import datetime
 import io
 import time
@@ -37,7 +34,6 @@ def _to_number(v):
 
 
 def parse_excel_encuestas(file_bytes):
-    """Devuelve (encuestas_nuevas: [dict,...] sin id, error: str|None)."""
     try:
         wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
     except Exception:

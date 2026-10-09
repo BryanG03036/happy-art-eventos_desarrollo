@@ -1,7 +1,3 @@
-"""Dependencias compartidas de FastAPI: plantillas Jinja2 y control de acceso
-por sesión (equivalente a onAuthStateChanged + obtenerRol() del SPA original,
-pero verificado en el servidor en cada request en vez de mantenerse en el
-cliente)."""
 from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse

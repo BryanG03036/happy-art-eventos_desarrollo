@@ -1,6 +1,3 @@
-"""Lógica del módulo Ventas (registro de contratos), portada de
-renderPaquetesGrid()/renderIncluidosList()/_pendientesVariantePaquete()/
-detectarLetrasNumero()/registrarVenta() en legacy/js/main.js."""
 import re
 import time
 

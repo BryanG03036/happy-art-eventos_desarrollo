@@ -1,11 +1,3 @@
-"""Lógica de negocio / cálculos, portada de legacy/js/operations.js (la parte
-sin DOM ni Firebase: emparejamiento de ítems de paquete con productos de
-inventario, cálculo de contabilidad, disponibilidad por fecha, etc.).
-
-Todas las funciones son puras: reciben las listas del estado (productos,
-contratos, ...) como argumentos en vez de leer un `state` global, siguiendo
-la misma arquitectura sin estado por-request de app/models.py.
-"""
 import re
 import unicodedata
 
@@ -20,7 +12,6 @@ def puede_editar_contrato(c, es_admin, email_actual):
 
 
 def calc_contabilidad_anio(contratos, contab_ajustes, anio):
-    """Devuelve {meses:[{happyN,happyV,condeN,condeV}×12], totalAnio:{...}}"""
     meses = [{"happyN": 0, "happyV": 0, "condeN": 0, "condeV": 0} for _ in range(12)]
     for c in contratos:
         fecha = c.get("fecha")
@@ -61,7 +52,6 @@ def calc_contabilidad_anio(contratos, contab_ajustes, anio):
 
 
 def calc_stock_separado_por_fecha(contratos, productos, fecha):
-    """Retorna (separado: {prodId: cantidad}, contratos_en_fecha: [contrato,...])"""
     separado = {}
     contratos_en_fecha = []
     if not fecha:

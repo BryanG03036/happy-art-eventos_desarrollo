@@ -1,11 +1,3 @@
-"""Acceso a Firebase: Realtime Database (vía Admin SDK) y verificación de
-credenciales contra Firebase Authentication (vía la API REST de Identity
-Toolkit, ya que el Admin SDK no puede verificar contraseñas — solo puede
-crear/consultar usuarios y verificar tokens ya emitidos).
-
-Este módulo reemplaza lo que en el proyecto original hacían directamente
-initializeApp/getDatabase/getAuth en el navegador (js/operations.js).
-"""
 import copy
 import json
 import threading
@@ -67,10 +59,6 @@ def invalidar_cache() -> None:
 
 
 def get_state() -> dict:
-    """Devuelve el estado completo, reutilizando una copia reciente (ver
-    config.STATE_CACHE_TTL) para no descargar toda la base en cada petición.
-    Siempre entrega una copia: quien la modifique no altera la caché hasta que
-    llame a save_state()."""
     ttl = config.STATE_CACHE_TTL
     with _cache_lock:
         vigente = (
@@ -88,9 +76,6 @@ def get_state() -> dict:
 
 
 def _leer_estado_remoto() -> dict:
-    """Lee el bloque completo de datos, igual que cargarDatosIniciales() en
-    operations.js. Devuelve un dict con listas ya normalizadas (Firebase RTDB
-    guarda arrays como objetos con claves numéricas cuando hay huecos)."""
     raw = get_root_ref().get() or {}
 
     def as_list(key):
@@ -119,11 +104,7 @@ def _leer_estado_remoto() -> dict:
 
 
 def save_state(state: dict) -> None:
-    """Escribe el bloque completo de datos, igual que guardarDatos() en
-    operations.js — un único set() que reemplaza todo el nodo. Ver RNF3 del
-    documento de requerimientos no funcionales: esto significa que dos
-    guardados casi simultáneos pueden pisarse entre sí; es una limitación
-    heredada tal cual del diseño original, no algo nuevo de este backend."""
+    
     try:
         get_root_ref().set(state)
     except Exception:
@@ -135,11 +116,6 @@ def save_state(state: dict) -> None:
 
 
 def sign_in_with_password(email: str, password: str) -> str:
-    """Verifica el correo/contraseña contra Firebase Authentication usando la
-    API REST de Identity Toolkit (accounts:signInWithPassword). Devuelve el
-    idToken si las credenciales son válidas, o lanza FirebaseAuthError con un
-    mensaje ya traducido a español (mismo mapeo de errores que hacerLogin()
-    tenía en el JS original)."""
     url = (
         "https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword"
         f"?key={config.FIREBASE_API_KEY}"
@@ -171,10 +147,6 @@ def sign_in_with_password(email: str, password: str) -> str:
 
 
 def verify_id_token(id_token: str) -> dict:
-    """Verifica un idToken de Firebase ya emitido (equivalente a lo que en el
-    cliente hacía onAuthStateChanged). Se usa justo después de
-    sign_in_with_password para confirmar el token antes de abrir sesión de
-    servidor, y así no confiar únicamente en la respuesta REST cruda."""
     _init_app()
     from firebase_admin import auth as fb_auth
 
