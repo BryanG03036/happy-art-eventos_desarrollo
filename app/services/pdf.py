@@ -1,9 +1,3 @@
-"""Generación del PDF de contrato (3 páginas: contrato, contenido del
-paquete, encuesta de satisfacción), portada de generarPDF() en
-legacy/js/main.js. En el original se generaba en el navegador con
-html2pdf.js/html2canvas; aquí se renderiza el mismo HTML/CSS con WeasyPrint
-del lado del servidor, usando el mismo layout y las mismas condiciones,
-nota y medios de pago."""
 from pathlib import Path
 
 from weasyprint import HTML

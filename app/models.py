@@ -1,16 +1,3 @@
-"""Helpers puros de dominio, portados de legacy/js/models.js.
-
-En el SPA original estas funciones leían un objeto `state` global mutable
-mantenido en memoria del navegador y sincronizado en vivo con Firebase. Aquí,
-siguiendo la arquitectura sin estado por-request de app/firebase.py, cada
-función recibe explícitamente las listas/dicts que necesita (obtenidas de
-firebase.get_state() al inicio de cada request) en vez de leer un global.
-
-Los datos constantes (catálogos, roles, etc.) se cargaron en
-app/data/catalog.json mediante una extracción directa desde el
-legacy/js/models.js original (import dinámico + volcado a JSON), para
-garantizar que coinciden exactamente con el original.
-"""
 import json
 import re
 import unicodedata
@@ -21,9 +8,7 @@ _catalog = json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))
 
 ROLES = _catalog["ROLES"]
 ROLES_PERSONAL = _catalog["ROLES_PERSONAL"]
-# Personal que se asigna por cupos a un evento (logístico/recreador/coordinador/
-# operario). "asesor" no se programa por evento, pero sí se registra como
-# integrante del staff en la sección Personal — de ahí ROLES_PERSONAL_STAFF.
+
 ROLES_PERSONAL_STAFF = ROLES_PERSONAL + [_catalog["ROL_PERSONAL_STAFF_EXTRA"]]
 CUENTAS_PAGO = _catalog["CUENTAS_PAGO"]
 RECUPERABLES_KEYWORDS = _catalog["RECUPERABLES_KEYWORDS"]
@@ -161,9 +146,9 @@ def resolver_personal_asignado(personal, c):
     return grupos
 
 
-# ── Programación por horario: el personal debe estar en bodega 3 horas antes
+# Programacion por horario: el personal debe estar en bodega 3 horas antes
 # del inicio más temprano del evento (decoración si aplica; si no, la hora de
-# inicio de la recreación/animación). ──────────────────────────────────────
+# inicio de la recreación/animacion)
 
 def _minutos_desde_hora(time_str):
     if not time_str:
@@ -376,9 +361,6 @@ def usuario_asesor(email):
 
 
 def fecha_venta_contrato(c):
-    """Fecha en que se VENDIÓ el contrato (cuando el asesor lo registró). Si
-    algún contrato antiguo no tiene fechaRegistro, se usa la fecha del evento
-    como respaldo."""
     from datetime import datetime
 
     if c.get("fechaRegistro"):
@@ -406,8 +388,6 @@ def quincena_de_fecha(fecha):
 
 
 def evento_realizado(c, ahora=None):
-    """¿Ya pasó la fecha del evento? Se valida contra la fecha actual,
-    comparando solo el día, para que un evento "hoy" cuente como realizado."""
     from datetime import date
 
     f = fecha_evento_contrato(c)

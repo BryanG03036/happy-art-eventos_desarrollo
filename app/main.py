@@ -1,6 +1,3 @@
-"""Punto de entrada de la aplicación FastAPI — reemplaza index.html + js/main.js
-del SPA original. Arma el shell Jinja2/Bootstrap, monta los routers de cada
-módulo y configura la sesión de servidor que sustituye a onAuthStateChanged."""
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles

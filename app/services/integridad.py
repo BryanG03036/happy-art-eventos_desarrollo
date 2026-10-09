@@ -1,9 +1,3 @@
-"""Verificación de integridad de los datos guardados en Firebase.
-
-Detecta inconsistencias que la aplicación evita al escribir, pero que pueden
-aparecer por datos históricos, ediciones directas en la base o guardados
-simultáneos (ver RNF3). Solo lee: no modifica el estado.
-"""
 from app.models import ROLES_PERSONAL, esta_disponible, get_persona
 
 
@@ -15,7 +9,6 @@ def _asignaciones(contrato):
 
 
 def verificar(state):
-    """Devuelve una lista de dicts {"tipo", "mensaje"}; vacía si todo está bien."""
     problemas = []
     productos = state.get("productos") or []
     contratos = state.get("contratos") or []

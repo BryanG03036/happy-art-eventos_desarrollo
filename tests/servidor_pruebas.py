@@ -14,10 +14,16 @@ import uvicorn
 
 from tests import fake_firebase
 
-fake_firebase.instalar()
+_fake = fake_firebase.instalar()
 
 from app.main import app  # noqa: E402  (importar después de instalar el fake)
 
+@app.post("/__pruebas/reiniciar", include_in_schema=False)
+def _reiniciar_datos():
+    """Solo existe en el servidor de pruebas: vuelve a los datos iniciales
+    para que cada caso arranque desde el mismo estado."""
+    _fake.reiniciar()
+    return {"ok": True}
 
 def main():
     parser = argparse.ArgumentParser()

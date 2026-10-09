@@ -1,8 +1,3 @@
-"""CRUD de inventario y registro de movimientos/préstamos, portado de las
-funciones guardarProducto/eliminarProducto/guardarMovimiento/guardarPrestamo/
-devolverPrestamo de legacy/js/main.js. Cada función recibe el `state` completo
-(dict con las listas ya cargadas desde Firebase) y lo muta en memoria; quien
-llama es responsable de firebase.save_state(state) después."""
 import time
 
 

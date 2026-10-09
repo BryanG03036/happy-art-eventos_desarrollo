@@ -1,8 +1,3 @@
-"""Wizard de préstamo por paquete (3 pasos), portado de loanSelectPkg()/
-renderLoanStep2()/confirmarPrestamoPaquete() en legacy/js/main.js. El borrador
-en curso se guarda en la sesión del servidor (equivalente a las variables
-loanPkgId/loanReturnItems/loanConsumeItems/loanExtrasSelected en memoria del
-navegador), ya que aquí no hay estado persistente de cliente."""
 import time
 
 from app.models import PAQUETES, is_consumable
