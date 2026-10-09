@@ -59,10 +59,6 @@ def invalidar_cache() -> None:
 
 
 def get_state() -> dict:
-    """Devuelve el estado completo, reutilizando una copia reciente (ver
-    config.STATE_CACHE_TTL) para no descargar toda la base en cada petición.
-    Siempre entrega una copia: quien la modifique no altera la caché hasta que
-    llame a save_state()."""
     ttl = config.STATE_CACHE_TTL
     with _cache_lock:
         vigente = (

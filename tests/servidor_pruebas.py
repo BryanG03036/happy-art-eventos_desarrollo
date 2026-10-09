@@ -1,13 +1,3 @@
-"""Levanta EventStock con el Firebase en memoria de tests/fake_firebase.py,
-para ejecutar los casos de prueba manuales en el navegador sin tocar datos
-reales.
-
-Uso (desde la raíz del proyecto):
-    python -m tests.servidor_pruebas            # http://127.0.0.1:8000
-    python -m tests.servidor_pruebas --port 8100
-
-Credenciales: ver tests/fake_firebase.py (contraseña: prueba123).
-"""
 import argparse
 
 import uvicorn
@@ -20,8 +10,6 @@ from app.main import app  # noqa: E402  (importar después de instalar el fake)
 
 @app.post("/__pruebas/reiniciar", include_in_schema=False)
 def _reiniciar_datos():
-    """Solo existe en el servidor de pruebas: vuelve a los datos iniciales
-    para que cada caso arranque desde el mismo estado."""
     _fake.reiniciar()
     return {"ok": True}
 

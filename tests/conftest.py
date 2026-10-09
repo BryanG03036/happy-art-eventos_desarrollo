@@ -1,12 +1,3 @@
-"""Fixtures compartidas de la suite de pruebas de EventStock.
-
-- Todas las pruebas corren contra el Firebase en memoria (tests/fake_firebase.py),
-  nunca contra el proyecto real.
-- La fecha "de hoy" se congela en el miércoles 7 de octubre de 2026 a mediodía
-  (hora de Bogotá), dentro del ciclo de pruebas del plan (4 al 10 de octubre),
-  para que los cálculos de comisiones, quincenas y calendario sean
-  reproducibles sin importar cuándo se ejecute la suite.
-"""
 import warnings
 
 import pytest
@@ -39,7 +30,6 @@ def fake():
 
 @pytest.fixture
 def login(fake):
-    """login("admin" | "asesor" | "asesor2" | "bodega") -> TestClient con sesión."""
     def _login(rol):
         cliente = TestClient(app, raise_server_exceptions=False)
         r = cliente.post(
@@ -53,7 +43,6 @@ def login(fake):
 
 
 def flash(cliente, ruta="/"):
-    """Devuelve (tipo, texto) del mensaje flash pendiente, leyendo una página."""
     import re
 
     r = cliente.get(ruta)

@@ -1,10 +1,3 @@
-"""Casos de prueba CP-01 a CP-15 del Plan de Pruebas de EventStock (sección 5).
-
-Cada prueba replica el caso del plan contra la app real (FastAPI +
-TestClient) con el Firebase de pruebas en memoria. Los resultados esperados
-de cálculo (comisión, valor total, hora en bodega) se comparan contra un
-valor calculado a mano, como pide la estrategia de pruebas (sección 3).
-"""
 import io
 import re
 
@@ -44,8 +37,6 @@ def test_cp01_login_redirige_a_vista_del_rol(login, rol, destino):
     ("admin", "/dashboard"), ("asesor", "/ventas"), ("bodega", "/inventario"),
 ])
 def test_cp01_con_sesion_abierta_la_raiz_lleva_a_la_vista_del_rol(login, rol, destino):
-    """Volver a entrar a la app (raíz o /login) con la sesión abierta debe
-    llevar a la vista inicial del rol, no a una página de acceso denegado."""
     cliente = login(rol)
     for ruta in ("/", "/login"):
         r = cliente.get(ruta)
@@ -76,7 +67,6 @@ def test_cp02_bodega_recibe_403_fuera_de_su_rol(login, ruta):
 
 @pytest.mark.parametrize("ruta", ["/contratos/1/pdf", "/contratos/descargar-fecha?fecha=2026-10-03"])
 def test_cp02_bodega_no_descarga_contratos(login, ruta):
-    """Los contratos (datos de clientes y valores) no son del rol bodega."""
     r = login("bodega").get(ruta, follow_redirects=False)
     assert r.status_code == 403
     assert not r.content.startswith(b"%PDF") and not r.content.startswith(b"PK")
@@ -100,7 +90,6 @@ def test_cp03_sku_duplicado_sin_importar_mayusculas_ni_espacios(login, fake, sku
 
 
 def test_cp03_bodega_no_puede_dar_de_alta_articulos(login, fake):
-    """Regla heredada del sistema original: el alta/edición/baja es solo de admin."""
     bodega = login("bodega")
     antes = len(fake.estado["productos"])
     bodega.post("/inventario/nuevo", data={**ARTICULO_BASE, "sku": "TEA-01"}, follow_redirects=False)
@@ -210,7 +199,6 @@ def test_cp09_descarga_pdf_de_contrato(login, rol, contrato_id):
 
 
 def _capturar_html_pdf(monkeypatch):
-    """Sustituye WeasyPrint para inspeccionar el HTML con el que se arma el PDF."""
     from app.services import pdf
 
     capturado = {}
@@ -227,8 +215,6 @@ def _capturar_html_pdf(monkeypatch):
 
 
 def test_cp09_pdf_con_caracteres_especiales_en_el_cliente(login, fake):
-    """Nombres con tilde o con el apóstrofo tipográfico (’) que ponen los
-    teclados de celular deben descargarse con nombre de archivo correcto."""
     fake.estado["contratos"][0]["cliente"] = "Ana O’Neil Gómez"
     r = login("admin").get("/contratos/1/pdf")
     assert r.status_code == 200 and r.content.startswith(b"%PDF")
@@ -263,8 +249,6 @@ def test_cp10_persona_no_disponible_no_es_asignable(login, fake):
 
 
 def test_cp10_al_cambiar_la_fecha_no_queda_asignado_personal_no_disponible(login, fake):
-    """Diana (id 3) está programada en el contrato 1. Si el asesor mueve el
-    evento a un día en que Diana no está disponible, no puede seguir asignada."""
     fake.estado["personal"][2]["noDisponible"] = ["2026-10-25"]
     asesor = login("asesor")
     asesor.post("/contratos/1/guardar", data={
@@ -326,7 +310,6 @@ def test_cp12_carga_de_encuestas_se_refleja_en_la_tabla(login, fake):
 
 @pytest.mark.parametrize("fecha_texto", ["3/10/2026 14:30:22", "2026-10-03 14:30:00"])
 def test_cp12_fechas_con_hora_no_rompen_el_dashboard(login, fake, fecha_texto):
-    """Microsoft Forms exporta la fecha como texto con hora."""
     admin = login("admin")
     archivo = _excel_encuestas([[1, "Ana", "3102112655", fecha_texto, 10, 5, 5, 5, "", ""]])
     admin.post("/dashboard/encuestas/cargar", files={"archivo": ("e.xlsx", archivo)}, follow_redirects=False)

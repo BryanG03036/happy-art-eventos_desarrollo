@@ -1,20 +1,3 @@
-"""Firebase en memoria para el ambiente de pruebas.
-
-El plan de pruebas exige un proyecto de Firebase de pruebas (no producción).
-Para poder ejecutar los casos sin credenciales reales, este módulo sustituye
-`app.firebase.get_state/save_state/sign_in_with_password/verify_id_token`
-por versiones en memoria con un conjunto de datos de prueba fijo:
-
-- catálogo de productos de ejemplo (con stock normal, bajo y agotado);
-- contratos de Happy Art y de Conde Eventos, de varios asesores, en el mes
-  actual y en meses distintos (para ranking y quincenas);
-- personal con y sin fechas marcadas como no disponibles.
-
-Credenciales de prueba (contraseña única: ``prueba123``):
-    admin   -> admin@happyarteventos.com
-    asesor  -> brayang@asesoreventos.com / eduardv@asesoreventos.com
-    bodega  -> jennyer@happyarteventos.com
-"""
 import copy
 import datetime as dt
 
@@ -35,7 +18,6 @@ BOGOTA = dt.timezone(dt.timedelta(hours=-5))
 
 
 def _ms(y, m, d, h=10):
-    """Timestamp en ms (como lo guarda la app) de una hora local de Bogotá."""
     return int(dt.datetime(y, m, d, h, 0, tzinfo=BOGOTA).timestamp() * 1000)
 
 
@@ -141,7 +123,6 @@ class FirebaseFalso:
 
 
 def instalar(fake=None):
-    """Sustituye las funciones de app.firebase por las versiones en memoria."""
     fake = fake or FirebaseFalso()
     firebase.get_state = fake.get_state
     firebase.save_state = fake.save_state

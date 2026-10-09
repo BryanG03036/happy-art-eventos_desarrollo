@@ -280,7 +280,6 @@ def _buscar_especificacion(item_name):
 # ── Formato de números / fechas ─────────────────────────────────────────────
 
 def _miles_es_co(n):
-    """Separador de miles con punto, como Number.toLocaleString('es-CO')."""
     entero = int(round(float(n)))
     return f"{entero:,}".replace(",", ".")
 
@@ -290,7 +289,6 @@ def fmt(n):
 
 
 def _parse_fecha(d):
-    """Convierte d a datetime; devuelve None si no se puede interpretar."""
     import re
     from datetime import datetime
 
@@ -332,8 +330,7 @@ def fmt_precio(n):
 
 
 def valor_total_contrato(c):
-    """Valor del paquete + transporte intermunicipal (si aplica) — es lo que
-    se muestra como 'Valor del Paquete' en el contrato impreso."""
+
     return (float(c.get("valor") or 0)) + (float(c.get("transporte") or 0))
 
 
@@ -372,8 +369,6 @@ def fecha_venta_contrato(c):
 
 
 def fecha_evento_contrato(c):
-    """Fecha en que SE REALIZA el evento (c.fecha), distinta de la fecha de
-    venta: se usa para saber en qué mes/quincena cae el evento."""
     from datetime import datetime
 
     if c.get("fecha"):
