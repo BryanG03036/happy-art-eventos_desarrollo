@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 
 from app import firebase
-from app.deps import redirect_to, require_admin, require_login, templates
+from app.deps import redirect_to, require_admin, require_asesor_o_admin, require_login, templates
 from app.models import (
     ROLES_PERSONAL, contratos_ocupado_en_fecha, esta_disponible, fmt_fecha_contrato, fmt_hora_bodega,
     fmt_hora_evento,
@@ -76,12 +76,15 @@ def eliminar(id: int, request: Request, user=Depends(require_login)):
 
 
 @router.get("/contratos/{id}/pdf")
-def descargar_pdf(id: int, request: Request, user=Depends(require_login)):
+def descargar_pdf(id: int, request: Request, user=Depends(require_asesor_o_admin)):
     state = firebase.get_state()
     c = svc.get_contrato(state, id)
     if not c:
         request.session["flash"] = {"type": "danger", "text": "Contrato no encontrado"}
         return redirect_to("/contratos")
+    if not _con_permiso(state, c, user):
+        # Igual que en la lista: solo el asesor titular (o admin) descarga el PDF.
+        raise HTTPException(status_code=403, detail="Solo el asesor que registró este contrato puede descargarlo.")
     pdf_bytes = generar_pdf_contrato(c)
     filename = nombre_archivo_pdf(c)
     return Response(content=pdf_bytes, media_type="application/pdf", headers={
@@ -90,9 +93,9 @@ def descargar_pdf(id: int, request: Request, user=Depends(require_login)):
 
 
 @router.get("/contratos/descargar-fecha")
-def descargar_todos_fecha(request: Request, user=Depends(require_login), fecha: str = ""):
+def descargar_todos_fecha(request: Request, user=Depends(require_asesor_o_admin), fecha: str = ""):
     state = firebase.get_state()
-    lista = [c for c in state["contratos"] if c.get("fecha") == fecha]
+    lista = [c for c in state["contratos"] if c.get("fecha") == fecha and _con_permiso(state, c, user)]
     if not fecha or not lista:
         request.session["flash"] = {"type": "danger", "text": "No hay contratos para esta fecha"}
         return redirect_to(f"/contratos?fecha={fecha}")
