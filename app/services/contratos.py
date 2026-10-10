@@ -76,6 +76,11 @@ def editar_contrato(state, contrato_id, form, pk_id_actual, items_editados, vari
             c["personalAsignado"][rol["id"]] = asignados[:nuevo_req[rol["id"]]]
             recorte = True
 
+    # Si cambió la fecha, el personal ya programado puede no estar disponible
+    # ese nuevo día o estar programado en otro evento: se libera ese cupo para
+    # que el admin lo reprograme (antes quedaba asignado igual).
+    liberados = _liberar_personal_no_disponible(state, c)
+
     pk_ref = next((p for p in PAQUETES if p["nombre"] == c["paquete"]), None)
     if pk_id_actual:
         pk_base = get_paquete(pk_id_actual)
@@ -112,7 +117,26 @@ def editar_contrato(state, contrato_id, form, pk_id_actual, items_editados, vari
         c["items"] = list(c.get("items") or []) + nuevos_extras_nombres
         c["extras"] = list(c.get("extras") or []) + nuevos_extras_nombres
 
-    return c, recorte
+    return c, recorte, liberados
+
+
+def _liberar_personal_no_disponible(state, c):
+    """Quita del contrato a quien no pueda trabajar en c["fecha"]. Devuelve
+    los nombres de las personas liberadas."""
+    liberados = []
+    asign = c.get("personalAsignado") or {}
+    for rol in ROLES_PERSONAL:
+        conservar = []
+        for pid in asign.get(rol["id"]) or []:
+            persona = get_persona(state["personal"], pid)
+            ocupado = contratos_ocupado_en_fecha(state["contratos"], pid, c["fecha"], c.get("id"))
+            if persona is not None and (not esta_disponible(persona, c["fecha"]) or ocupado):
+                liberados.append(persona["nombre"])
+            else:
+                conservar.append(pid)
+        if asign.get(rol["id"]) is not None:
+            asign[rol["id"]] = conservar
+    return liberados
 
 
 def borrar_extra_existente(state, contrato_id, idx, es_admin, email):

@@ -314,10 +314,14 @@ async def guardar_edicion(id: int, request: Request, user=Depends(require_login)
     extras_nuevos = _extras_from_form(form)
     state = firebase.get_state()
     try:
-        c, recorte = svc.editar_contrato(state, id, form, pk_id_actual, items_editados, variantes_sel, extras_nuevos,
-                                          user["role"] == "admin", user["email"])
+        c, recorte, liberados = svc.editar_contrato(state, id, form, pk_id_actual, items_editados, variantes_sel,
+                                                     extras_nuevos, user["role"] == "admin", user["email"])
         firebase.save_state(state)
-        if recorte:
+        if liberados:
+            request.session["flash"] = {"type": "warning", "text": (
+                f"⚠️ Se quitó de la programación a {', '.join(liberados)}: no está disponible el "
+                f"{c['fecha']}. El administrador debe reprogramar el personal.")}
+        elif recorte:
             request.session["flash"] = {"type": "warning", "text": "⚠️ Se ajustó el personal ya programado al nuevo límite solicitado"}
         else:
             request.session["flash"] = {"type": "success", "text": "Contrato actualizado ✅"}
