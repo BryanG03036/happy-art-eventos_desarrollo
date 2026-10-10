@@ -25,9 +25,15 @@ def get_prod(state, id_):
     return next((p for p in state["productos"] if p["id"] == id_), None)
 
 
+def _norm_sku(sku):
+    """'tea-01', ' TEA-01 ' y 'TEA-01' son el mismo código."""
+    return " ".join(str(sku or "").split()).casefold()
+
+
 def _sku_en_uso(state, sku, excluir_id=None):
     """¿Otro artículo (distinto de excluir_id) ya usa este código?"""
-    return any(p["sku"] == sku and p["id"] != excluir_id for p in state["productos"])
+    clave = _norm_sku(sku)
+    return any(_norm_sku(p["sku"]) == clave and p["id"] != excluir_id for p in state["productos"])
 
 
 def crear_producto(state, data):
