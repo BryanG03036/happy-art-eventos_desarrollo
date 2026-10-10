@@ -365,6 +365,16 @@ def nombre_paquete_empresa(c):
     return pk.get("nombreConde") if c.get("empresa") == "conde" else pk.get("nombreHappy") or pk["nombre"]
 
 
+def agrupar_items(items):
+    """['SILLA', 'SILLA', 'MESA'] -> [('SILLA', 2), ('MESA', 1)], en el orden
+    en que aparecen. Así el PDF muestra 'SILLA × 20' en una sola línea en vez
+    de 20 líneas iguales."""
+    conteo = {}
+    for item in items or []:
+        conteo[item] = conteo.get(item, 0) + 1
+    return list(conteo.items())
+
+
 def fmt_fecha_contrato(date_str):
     if not date_str:
         return ""

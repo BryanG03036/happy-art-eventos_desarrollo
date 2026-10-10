@@ -104,7 +104,7 @@
   <div class="titulo">Contenido del Paquete: {{ nombre_paquete_empresa(c) }}</div>
   <p class="pk-intro">Para mayor seguridad de su paquete contratado y que todo salga bien, le informamos el contenido del paquete seleccionado:</p>
   <ul class="paquete-items">
-    {% for i in c['items'] %}<li><span class="chk">✔</span><span>{{ i }}</span></li>{% endfor %}
+    {% for i, n in agrupar_items(c['items']) %}<li><span class="chk">✔</span><span>{{ i }}{% if n > 1 %} <strong>× {{ n }}</strong>{% endif %}</span></li>{% endfor %}
   </ul>
 </div>
 

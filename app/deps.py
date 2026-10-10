@@ -15,6 +15,7 @@ templates.env.globals["fmt"] = models.fmt
 templates.env.globals["fmt_precio"] = models.fmt_precio
 templates.env.globals["valor_total_contrato"] = models.valor_total_contrato
 templates.env.globals["nombre_paquete_empresa"] = models.nombre_paquete_empresa
+templates.env.globals["agrupar_items"] = models.agrupar_items
 templates.env.globals["fmt_date"] = models.fmt_date
 templates.env.globals["fmt_fecha"] = models.fmt_fecha
 templates.env.globals["fmt_hora_evento"] = models.fmt_hora_evento
