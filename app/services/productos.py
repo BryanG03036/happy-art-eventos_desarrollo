@@ -1,3 +1,8 @@
+"""CRUD de inventario y registro de movimientos/préstamos, portado de las
+funciones guardarProducto/eliminarProducto/guardarMovimiento/guardarPrestamo/
+devolverPrestamo de legacy/js/main.js. Cada función recibe el `state` completo
+(dict con las listas ya cargadas desde Firebase) y lo muta en memoria; quien
+llama es responsable de firebase.save_state(state) después."""
 import time
 
 
@@ -20,13 +25,18 @@ def get_prod(state, id_):
     return next((p for p in state["productos"] if p["id"] == id_), None)
 
 
+def _sku_en_uso(state, sku, excluir_id=None):
+    """¿Otro artículo (distinto de excluir_id) ya usa este código?"""
+    return any(p["sku"] == sku and p["id"] != excluir_id for p in state["productos"])
+
+
 def crear_producto(state, data):
     sku = data["sku"].strip()
     nombre = data["nombre"].strip()
     cat = data["cat"]
     if not sku or not nombre or not cat:
         raise ValidationError("Completa código, nombre y categoría")
-    if any(p["sku"] == sku for p in state["productos"]):
+    if _sku_en_uso(state, sku):
         raise ValidationError("Ese código ya existe")
     stock = int(data.get("stock") or 0)
     p = {
@@ -63,6 +73,8 @@ def editar_producto(state, id_, data):
     cat = data["cat"]
     if not sku or not nombre or not cat:
         raise ValidationError("Completa código, nombre y categoría")
+    if _sku_en_uso(state, sku, excluir_id=id_):
+        raise ValidationError("Ese código ya existe")
     stock = int(data.get("stock") or 0)
     diff = stock - p["stock"]
     p.update({
