@@ -6,7 +6,7 @@
 
 <form method="post" action="/contratos/{{ c.id }}/guardar" id="ecForm">
 <div class="row g-3">
-  <div class="col-md-4"><label class="form-label">Fecha del evento</label><input type="date" name="fecha" class="form-control" value="{{ c.fecha }}"></div>
+  <div class="col-md-4"><label class="form-label">Fecha del evento</label><input type="date" name="fecha" class="form-control" value="{{ c.fecha }}" required></div>
   <div class="col-md-4"><label class="form-label">Hora de decoración</label><input type="time" name="horaDecoracion" class="form-control" value="{{ c.horaDecoracion or '' }}"></div>
   <div class="col-md-4"><label class="form-label">Hora de inicio del evento</label><input type="time" name="hora" class="form-control" value="{{ c.hora or '' }}"></div>
   <div class="col-12"><label class="form-label">Nombre completo del cliente</label><input type="text" name="cliente" class="form-control" value="{{ c.cliente }}"></div>

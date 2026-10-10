@@ -2,13 +2,15 @@
 (admin) y descarga de PDF. Portado de la vista view-contratos y sus
 funciones en legacy/js/main.js."""
 import io
+import unicodedata
 import zipfile
+from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import Response, StreamingResponse
 
 from app import firebase
-from app.deps import redirect_to, require_admin, require_login, templates
+from app.deps import redirect_to, require_admin, require_asesor_o_admin, require_login, templates
 from app.models import (
     ROLES_PERSONAL, contratos_ocupado_en_fecha, esta_disponible, fmt_fecha_contrato, fmt_hora_bodega,
     fmt_hora_evento,
@@ -19,6 +21,18 @@ from app.services.calculos import puede_editar_contrato
 from app.services.pdf import generar_pdf_contrato, nombre_archivo_pdf
 
 router = APIRouter()
+
+
+def _content_disposition(tipo, filename):
+    """Cabecera Content-Disposition segura para cualquier nombre de cliente.
+
+    Las cabeceras HTTP solo admiten latin-1: un nombre con el apóstrofo
+    tipográfico (’) de los teclados de celular hacía fallar la respuesta
+    (error 500) y las tildes llegaban dañadas al navegador. Se envía un
+    nombre ASCII de respaldo y el nombre real en UTF-8 (RFC 6266 / 5987)."""
+    ascii_ = unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode("ascii")
+    ascii_ = ascii_.replace('"', "").replace("\\", "") or "contrato.pdf"
+    return f"{tipo}; filename=\"{ascii_}\"; filename*=UTF-8''{quote(filename, safe='')}"
 
 
 def _con_permiso(state, c, user):
@@ -62,23 +76,26 @@ def eliminar(id: int, request: Request, user=Depends(require_login)):
 
 
 @router.get("/contratos/{id}/pdf")
-def descargar_pdf(id: int, request: Request, user=Depends(require_login)):
+def descargar_pdf(id: int, request: Request, user=Depends(require_asesor_o_admin)):
     state = firebase.get_state()
     c = svc.get_contrato(state, id)
     if not c:
         request.session["flash"] = {"type": "danger", "text": "Contrato no encontrado"}
         return redirect_to("/contratos")
+    if not _con_permiso(state, c, user):
+        # Igual que en la lista: solo el asesor titular (o admin) descarga el PDF.
+        raise HTTPException(status_code=403, detail="Solo el asesor que registró este contrato puede descargarlo.")
     pdf_bytes = generar_pdf_contrato(c)
     filename = nombre_archivo_pdf(c)
     return Response(content=pdf_bytes, media_type="application/pdf", headers={
-        "Content-Disposition": f'inline; filename="{filename}"'
+        "Content-Disposition": _content_disposition("inline", filename)
     })
 
 
 @router.get("/contratos/descargar-fecha")
-def descargar_todos_fecha(request: Request, user=Depends(require_login), fecha: str = ""):
+def descargar_todos_fecha(request: Request, user=Depends(require_asesor_o_admin), fecha: str = ""):
     state = firebase.get_state()
-    lista = [c for c in state["contratos"] if c.get("fecha") == fecha]
+    lista = [c for c in state["contratos"] if c.get("fecha") == fecha and _con_permiso(state, c, user)]
     if not fecha or not lista:
         request.session["flash"] = {"type": "danger", "text": "No hay contratos para esta fecha"}
         return redirect_to(f"/contratos?fecha={fecha}")
@@ -297,10 +314,14 @@ async def guardar_edicion(id: int, request: Request, user=Depends(require_login)
     extras_nuevos = _extras_from_form(form)
     state = firebase.get_state()
     try:
-        c, recorte = svc.editar_contrato(state, id, form, pk_id_actual, items_editados, variantes_sel, extras_nuevos,
-                                          user["role"] == "admin", user["email"])
+        c, recorte, liberados = svc.editar_contrato(state, id, form, pk_id_actual, items_editados, variantes_sel,
+                                                     extras_nuevos, user["role"] == "admin", user["email"])
         firebase.save_state(state)
-        if recorte:
+        if liberados:
+            request.session["flash"] = {"type": "warning", "text": (
+                f"⚠️ Se quitó de la programación a {', '.join(liberados)}: no está disponible el "
+                f"{c['fecha']}. El administrador debe reprogramar el personal.")}
+        elif recorte:
             request.session["flash"] = {"type": "warning", "text": "⚠️ Se ajustó el personal ya programado al nuevo límite solicitado"}
         else:
             request.session["flash"] = {"type": "success", "text": "Contrato actualizado ✅"}
