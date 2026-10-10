@@ -1,3 +1,11 @@
+"""Lógica de negocio / cálculos, portada de legacy/js/operations.js (la parte
+sin DOM ni Firebase: emparejamiento de ítems de paquete con productos de
+inventario, cálculo de contabilidad, disponibilidad por fecha, etc.).
+
+Todas las funciones son puras: reciben las listas del estado (productos,
+contratos, ...) como argumentos en vez de leer un `state` global, siguiendo
+la misma arquitectura sin estado por-request de app/models.py.
+"""
 import re
 import unicodedata
 
@@ -12,6 +20,7 @@ def puede_editar_contrato(c, es_admin, email_actual):
 
 
 def calc_contabilidad_anio(contratos, contab_ajustes, anio):
+    """Devuelve {meses:[{happyN,happyV,condeN,condeV}×12], totalAnio:{...}}"""
     meses = [{"happyN": 0, "happyV": 0, "condeN": 0, "condeV": 0} for _ in range(12)]
     for c in contratos:
         fecha = c.get("fecha")
@@ -51,7 +60,37 @@ def calc_contabilidad_anio(contratos, contab_ajustes, anio):
     return {"meses": meses, "totalAnio": total_anio}
 
 
+_ETIQUETA_CON_SKU = re.compile(r"^(?P<nombre>.+) \((?P<sku>[^()]+)\)$")
+
+
+def producto_desde_etiqueta(productos, etiqueta):
+    """Producto de inventario al que se refiere una línea guardada en un contrato.
+
+    Los contratos guardan los artículos con tres formatos:
+      - "NOMBRE"              (ítems normales y extras)
+      - "NOMBRE · SKU"        (variante elegida: disfraz, personaje...)
+      - "NOMBRE (SKU)"        (letras/números luminosos o de globo)
+    Antes solo se reconocía el primero, así que variantes y letras no se
+    descontaban de la disponibilidad por fecha."""
+    etiqueta = etiqueta or ""
+    exacto = next((p for p in productos if p.get("nombre") == etiqueta), None)
+    if exacto:
+        return exacto
+    nombre, sku = None, None
+    if " · " in etiqueta:
+        nombre, sku = etiqueta.split(" · ", 1)
+    else:
+        m = _ETIQUETA_CON_SKU.match(etiqueta)
+        if m:
+            nombre, sku = m.group("nombre"), m.group("sku")
+    if nombre is None:
+        return None
+    return (next((p for p in productos if p.get("nombre") == nombre and p.get("sku") == sku), None)
+            or next((p for p in productos if p.get("nombre") == nombre), None))
+
+
 def calc_stock_separado_por_fecha(contratos, productos, fecha):
+    """Retorna (separado: {prodId: cantidad}, contratos_en_fecha: [contrato,...])"""
     separado = {}
     contratos_en_fecha = []
     if not fecha:
@@ -61,7 +100,7 @@ def calc_stock_separado_por_fecha(contratos, productos, fecha):
             contratos_en_fecha.append(c)
             all_items = list(c.get("descontadosPaquete") or []) + list(c.get("extras") or [])
             for nombre in all_items:
-                prod = next((p for p in productos if p.get("nombre") == nombre), None)
+                prod = producto_desde_etiqueta(productos, nombre)
                 if prod:
                     separado[prod["id"]] = separado.get(prod["id"], 0) + 1
     return separado, contratos_en_fecha
