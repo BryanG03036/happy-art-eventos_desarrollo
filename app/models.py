@@ -404,8 +404,10 @@ def fecha_venta_contrato(c):
     como respaldo."""
     from datetime import datetime
 
+    from app import tiempo
+
     if c.get("fechaRegistro"):
-        return datetime.fromtimestamp(c["fechaRegistro"] / 1000).date()
+        return tiempo.desde_ms(c["fechaRegistro"]).date()
     if c.get("fecha"):
         y, m, d = c["fecha"].split("-")
         return datetime(int(y), int(m), int(d)).date()
@@ -431,12 +433,12 @@ def quincena_de_fecha(fecha):
 def evento_realizado(c, ahora=None):
     """¿Ya pasó la fecha del evento? Se valida contra la fecha actual,
     comparando solo el día, para que un evento "hoy" cuente como realizado."""
-    from datetime import date
+    from app import tiempo
 
     f = fecha_evento_contrato(c)
     if not f:
         return False
-    hoy = ahora or date.today()
+    hoy = ahora or tiempo.hoy()
     return f <= hoy
 
 

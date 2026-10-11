@@ -1,4 +1,10 @@
+"""Cálculo de comisiones de asesores, portado de la sección COMISIONES DE
+ASESORES en legacy/js/operations.js y legacy/js/main.js. No hay persistencia
+propia: todo se recalcula desde state["contratos"] en cada request, así que
+crear/editar/borrar un contrato se refleja solo, sin tocar este módulo."""
 import datetime
+
+from app import tiempo
 
 from app.models import (
     ROLES,
@@ -31,6 +37,9 @@ def _es_contrato_de_asesor(c):
 
 
 def lista_asesores(state):
+    """Correos de asesores: los definidos en ROLES + cualquier otro correo que
+    aparezca en contratos (así un asesor nuevo entra a la tabla sin tocar nada
+    más). Se excluyen admin y bodega."""
     excluidos = _correos_excluidos()
     asesores = {_email_norm(e) for e in ROLES["ASESOR_EMAILS"]}
     for c in state["contratos"]:
@@ -66,7 +75,9 @@ def rotulo_semana(ini, fin):
 
 
 def meses_con_ventas(state):
-    meses = {clave_mes(datetime.date.today())}
+    """Meses (YYYY-MM) en los que hay eventos de algún asesor (según la fecha
+    del evento, no la de venta), más el mes actual. Más reciente primero."""
+    meses = {clave_mes(tiempo.hoy())}
     for c in state["contratos"]:
         if not _es_contrato_de_asesor(c):
             continue
@@ -77,6 +88,8 @@ def meses_con_ventas(state):
 
 
 def calc_comisiones_semanales(state, email):
+    """Tabla personal: comisión por semana de UN asesor (el que tiene la
+    sesión iniciada)."""
     mio = _email_norm(email)
     semanas = {}
 
@@ -91,7 +104,7 @@ def calc_comisiones_semanales(state, email):
             }
         return semanas[k]
 
-    asegurar_semana(datetime.date.today())  # la semana actual siempre aparece
+    asegurar_semana(tiempo.hoy())  # la semana actual siempre aparece
     if mio and mio not in _correos_excluidos():
         for c in state["contratos"]:
             if _email_norm(c.get("asesor")) != mio:
@@ -116,6 +129,9 @@ def calc_comisiones_semanales(state, email):
 
 
 def calc_ranking_mes(state, clave_del_mes):
+    """Tabla competitiva: todos los asesores en un mes (YYYY-MM), agrupados
+    por la fecha DEL EVENTO, con el desglose por quincena de los eventos ya
+    realizados (lo que efectivamente se paga)."""
     filas = {
         e: {
             "email": e, "usuario": usuario_asesor(e), "n": 0, "comision": 0,
@@ -146,6 +162,9 @@ def calc_ranking_mes(state, clave_del_mes):
 
 
 def calc_validacion_quincenas(state, clave_del_mes):
+    """Solo para admin: junta los eventos de TODOS los asesores del mes,
+    quincena por quincena, para revisar rápido qué comisiones ya se pueden
+    pagar (evento ya realizado según la fecha de hoy)."""
     q1, q2 = [], []
     for c in state["contratos"]:
         if not _es_contrato_de_asesor(c):
