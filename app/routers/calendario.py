@@ -20,6 +20,10 @@ MESES_NOMBRE = [
 @router.get("/calendario")
 def ver_calendario(request: Request, user=Depends(require_login), anio: int = 0, mes: int = 0, dia: str = ""):
     hoy = date.today()
+    # Valores fuera de rango (enlace manipulado o mal copiado) hacían fallar
+    # calendar.monthdayscalendar con error 500: se vuelve al mes actual.
+    if not 1 <= mes <= 12 or not 1 <= anio <= 9999:
+        anio, mes = 0, 0
     anio = anio or hoy.year
     mes = mes or hoy.month
     state = firebase.get_state()
