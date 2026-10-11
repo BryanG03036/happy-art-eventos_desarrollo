@@ -108,9 +108,16 @@ def eliminar_producto(state, id_):
     state["movimientos"] = [m for m in state["movimientos"] if m["prodId"] != id_]
 
 
+# Tipos que se registran desde Movimientos. "prestamo" y "devolucion" solo
+# los genera el módulo Préstamos (que descuenta y repone el stock).
+TIPOS_MOVIMIENTO = ("entrada", "salida", "ajuste")
+
+
 def registrar_movimiento(state, data):
     prod_id = int(data["prodId"])
     tipo = data["tipo"]
+    if tipo not in TIPOS_MOVIMIENTO:
+        raise ValidationError("Tipo de movimiento no válido")
     qty = int(data.get("qty") or 0)
     evento = (data.get("evento") or "").strip()
     nota = (data.get("nota") or "").strip()
