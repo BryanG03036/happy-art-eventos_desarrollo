@@ -37,8 +37,8 @@ def ver_comisiones(request: Request, user=Depends(require_asesor_o_admin), mes: 
     if user["role"] == "admin":
         quincenas = comisiones.calc_validacion_quincenas(state, mes_sel)
 
-    return templates.TemplateResponse("comisiones.html", {
-        "request": request, "user": user, "active_view": "comisiones",
+    return templates.TemplateResponse(request, "comisiones.html", {
+        "user": user, "active_view": "comisiones",
         "meses": meses, "mes_sel": mes_sel, "mes_actual": mes_actual,
         "ranking": ranking, "semanas": semanas, "semana_actual": semana_actual,
         "mi_mes": mi_mes, "total_acumulado": total_acumulado,
