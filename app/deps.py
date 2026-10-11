@@ -44,6 +44,14 @@ def get_current_user(request: Request):
     return request.session.get("user")
 
 
+PAGINA_INICIO = {"admin": "/dashboard", "asesor": "/ventas", "bodega": "/inventario"}
+
+
+def pagina_inicio(user) -> str:
+    """Vista inicial de cada rol (la misma a la que lleva el login)."""
+    return PAGINA_INICIO.get((user or {}).get("role"), "/login")
+
+
 def require_login(request: Request):
     user = get_current_user(request)
     if not user:

@@ -1,10 +1,13 @@
+"""Punto de entrada de la aplicación FastAPI — reemplaza index.html + js/main.js
+del SPA original. Arma el shell Jinja2/Bootstrap, monta los routers de cada
+módulo y configura la sesión de servidor que sustituye a onAuthStateChanged."""
 from fastapi import FastAPI, Request
 from fastapi.responses import RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 
 from app import config
-from app.deps import get_current_user, templates
+from app.deps import get_current_user, pagina_inicio, templates
 from app.routers import (
     alertas,
     auth,
@@ -42,7 +45,9 @@ def index(request: Request):
     user = get_current_user(request)
     if not user:
         return RedirectResponse(url="/login")
-    return RedirectResponse(url="/dashboard")
+    # Antes iba siempre a /dashboard, que es solo de admin: asesor y bodega
+    # recibían 403 al abrir la app o al pulsar "Volver" en una página de error.
+    return RedirectResponse(url=pagina_inicio(user))
 
 
 @app.exception_handler(403)

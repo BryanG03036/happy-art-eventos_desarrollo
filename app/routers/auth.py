@@ -7,7 +7,7 @@ from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
 from app import firebase, models
-from app.deps import redirect_to, templates
+from app.deps import pagina_inicio, redirect_to, templates
 
 router = APIRouter()
 
@@ -36,8 +36,7 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
         return templates.TemplateResponse(request, "login.html", {"error": error}, status_code=403)
 
     request.session["user"] = {"email": email, "role": rol}
-    destino = {"admin": "/dashboard", "asesor": "/ventas", "bodega": "/inventario"}[rol]
-    return redirect_to(destino)
+    return redirect_to(pagina_inicio(request.session["user"]))
 
 
 @router.post("/logout")

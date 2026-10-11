@@ -1,3 +1,6 @@
+"""Encuestas de satisfacción — carga desde plantilla Excel (Microsoft Forms) y
+agregación por fecha, portado de cargarPlantillaEncuestas()/renderEncuestas()
+en legacy/js/main.js. Usa openpyxl en vez de SheetJS."""
 import datetime
 import io
 import time
@@ -11,18 +14,36 @@ class ImportError_(Exception):
     pass
 
 
+_FORMATOS_FECHA = ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%d/%m/%y", "%m/%d/%y")
+
+
 def _parse_fecha_encuesta(v):
+    """Fecha de la respuesta en formato YYYY-MM-DD, o "" si no se reconoce.
+
+    Microsoft Forms exporta la fecha como texto y casi siempre con hora
+    ("3/10/2026 14:30:22", "2026-10-03 14:30:00"). Antes esos valores se
+    guardaban tal cual y luego el dashboard fallaba (error 500) al
+    interpretarlos; ahora se toma solo la parte de la fecha."""
     if isinstance(v, (datetime.datetime, datetime.date)):
         return v.strftime("%Y-%m-%d")
     s = str(v or "").strip()
     if not s:
         return ""
-    for fmt in ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y"):
+    parte_fecha = s.replace("T", " ").split()[0].rstrip(",")
+    for fmt in _FORMATOS_FECHA:
         try:
-            return datetime.datetime.strptime(s, fmt).strftime("%Y-%m-%d")
+            return datetime.datetime.strptime(parte_fecha, fmt).strftime("%Y-%m-%d")
         except ValueError:
             continue
-    return s
+    return ""
+
+
+def _fecha_iso_valida(s):
+    try:
+        datetime.date.fromisoformat(str(s))
+        return True
+    except ValueError:
+        return False
 
 
 def _to_number(v):
@@ -34,19 +55,24 @@ def _to_number(v):
 
 
 def parse_excel_encuestas(file_bytes):
+    """Devuelve (encuestas_nuevas: [dict,...] sin id, error: str|None, omitidas: int).
+
+    Las filas cuya fecha no se puede interpretar se omiten y se cuentan en
+    `omitidas` para avisarle al usuario."""
+    omitidas = 0
     try:
         wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
     except Exception:
-        return [], "Error al leer el archivo — verifica que sea la plantilla correcta (.xlsx)"
+        return [], "Error al leer el archivo — verifica que sea la plantilla correcta (.xlsx)", 0
 
     sheet = wb.worksheets[0]
     rows = list(sheet.iter_rows(values_only=True))
     if not rows:
-        return [], "El archivo no tiene filas de datos"
+        return [], "El archivo no tiene filas de datos", 0
     headers = [str(h) if h is not None else "" for h in rows[0]]
     filas = [dict(zip(headers, row)) for row in rows[1:]]
     if not filas:
-        return [], "El archivo no tiene filas de datos"
+        return [], "El archivo no tiene filas de datos", 0
 
     mapa = {}
     for campo in ENCUESTA_CAMPOS:
@@ -55,7 +81,7 @@ def parse_excel_encuestas(file_bytes):
                 mapa[campo["key"]] = h
                 break
     if "fecha" not in mapa:
-        return [], "No se encontró una columna de fecha en el archivo"
+        return [], "No se encontró una columna de fecha en el archivo", 0
 
     nuevas = []
     for fila in filas:
@@ -65,6 +91,8 @@ def parse_excel_encuestas(file_bytes):
 
         fecha = _parse_fecha_encuesta(val("fecha"))
         if not fecha:
+            if any(v not in (None, "") for v in fila.values()):
+                omitidas += 1
             continue
         nuevas.append({
             "nombreCliente": str(val("nombreCliente") or "").strip(),
@@ -78,13 +106,16 @@ def parse_excel_encuestas(file_bytes):
             "mejora": str(val("mejora") or "").strip(),
             "fechaCarga": int(time.time() * 1000),
         })
-    return nuevas, None
+    return nuevas, None, omitidas
 
 
 def agregar_por_fecha(encuestas, dias_filtro):
+    # Se ignoran fechas no válidas que hayan quedado guardadas por cargas
+    # anteriores, para que una sola fila mala no tumbe todo el dashboard.
     filtradas = [
         e for e in encuestas
-        if e.get("fecha") and datetime.date.fromisoformat(e["fecha"]).isoweekday() % 7 in dias_filtro
+        if e.get("fecha") and _fecha_iso_valida(e["fecha"])
+        and datetime.date.fromisoformat(e["fecha"]).isoweekday() % 7 in dias_filtro
     ]
     por_fecha = {}
     for e in filtradas:
