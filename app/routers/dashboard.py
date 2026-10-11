@@ -109,7 +109,7 @@ async def cargar_encuestas(request: Request, user=Depends(require_admin), archiv
         request.session["flash"] = {"type": "danger", "text": "Selecciona un archivo .xlsx"}
         return redirect_to("/dashboard")
     contenido = await archivo.read()
-    nuevas, error = encuestas_svc.parse_excel_encuestas(contenido)
+    nuevas, error, omitidas = encuestas_svc.parse_excel_encuestas(contenido)
     if error:
         request.session["flash"] = {"type": "danger", "text": f"❌ {error}"}
         return redirect_to("/dashboard")
@@ -119,5 +119,8 @@ async def cargar_encuestas(request: Request, user=Depends(require_admin), archiv
         state["nextEncuestaId"] += 1
         state["encuestas"].append(e)
     firebase.save_state(state)
-    request.session["flash"] = {"type": "success", "text": f"✅ {len(nuevas)} encuesta(s) importada(s)"}
+    texto = f"✅ {len(nuevas)} encuesta(s) importada(s)"
+    if omitidas:
+        texto += f" · {omitidas} fila(s) omitida(s) por fecha no válida"
+    request.session["flash"] = {"type": "success" if not omitidas else "warning", "text": texto}
     return redirect_to("/dashboard")
