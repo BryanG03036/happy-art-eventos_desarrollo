@@ -151,8 +151,8 @@ def registrar_prestamo(state, data):
     p["stock"] -= qty
     retorno_ms = None
     if retorno:
-        import datetime
-        retorno_ms = int(datetime.datetime.fromisoformat(retorno).timestamp() * 1000)
+        from app import tiempo
+        retorno_ms = tiempo.ms_de_fecha(retorno[:10])
     state["prestamos"].append({
         "id": state["nextPrestId"], "prodId": prod_id, "qty": qty, "cliente": cliente,
         "salida": _now_ms(), "retorno": retorno_ms, "devuelto": False, "nota": nota,

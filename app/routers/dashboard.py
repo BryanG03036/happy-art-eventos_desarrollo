@@ -1,15 +1,13 @@
 """Dashboard (solo admin) — estadísticas generales, contabilidad de ventas por
 año/mes (con ajustes manuales) y encuestas de satisfacción. Portado de
 renderDashboard()/renderContabilidad()/renderEncuestas() en main.js."""
-from datetime import date
-
 import csv
 import io
 
 from fastapi import APIRouter, Depends, Form, HTTPException, Request, UploadFile
 from fastapi.responses import StreamingResponse
 
-from app import firebase, models
+from app import firebase, models, tiempo
 from app.deps import redirect_to, require_admin, templates
 from app.services import encuestas as encuestas_svc
 from app.services.calculos import calc_contabilidad_anio
@@ -31,10 +29,10 @@ def ver_dashboard(request: Request, user=Depends(require_admin), anio: int = 0):
         p = next((x for x in productos if x["id"] == m["prodId"]), None)
         m["prod_nombre"] = p["nombre"] if p else "—"
 
-    anio = anio or date.today().year
+    anio = anio or tiempo.hoy().year
     anios_con_datos = sorted({int(c["fecha"].split("-")[0]) for c in state["contratos"] if c.get("fecha")}, reverse=True)
-    if date.today().year not in anios_con_datos:
-        anios_con_datos = sorted(set(anios_con_datos) | {date.today().year}, reverse=True)
+    if tiempo.hoy().year not in anios_con_datos:
+        anios_con_datos = sorted(set(anios_con_datos) | {tiempo.hoy().year}, reverse=True)
     contab = calc_contabilidad_anio(state["contratos"], state["contabAjustes"], anio)
 
     dias_raw = request.query_params.getlist("dias")

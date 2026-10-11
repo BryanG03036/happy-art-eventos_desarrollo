@@ -3,7 +3,7 @@ paquete completo (3 pasos), portado de renderPrestamos()/guardarPrestamo()/
 loanSelectPkg()/confirmarPrestamoPaquete() en legacy/js/main.js."""
 from fastapi import APIRouter, Depends, Form, Request
 
-from app import firebase
+from app import firebase, tiempo
 from app.deps import redirect_to, require_admin_o_bodega, templates
 from app.models import PAQUETES
 from app.services import productos as svc
@@ -229,7 +229,7 @@ def wizard_paso3(request: Request, user=Depends(require_admin_o_bodega)):
         return redirect_to("/prestamos/wizard")
     pk = next((p for p in PAQUETES if p["id"] == draft["pkId"]), None)
     import datetime
-    retorno_default = (datetime.date.today() + datetime.timedelta(days=1)).isoformat()
+    retorno_default = (tiempo.hoy() + datetime.timedelta(days=1)).isoformat()
     return templates.TemplateResponse(request, "prestamo_wizard.html", {
         "user": user, "active_view": "prestamos", "paso": 3, "pk": pk, "retorno_default": retorno_default,
     })

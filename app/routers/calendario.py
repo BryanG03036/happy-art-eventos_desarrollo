@@ -1,11 +1,9 @@
 """Módulo Calendario — vista mensual de eventos y reporte de materiales
 comprometidos por fecha. Visible para todos los roles (portado de
 view-calendario en legacy/index.html)."""
-from datetime import date
-
 from fastapi import APIRouter, Depends, Request
 
-from app import firebase
+from app import firebase, tiempo
 from app.deps import require_login, templates
 from app.services import calendario as svc
 
@@ -19,7 +17,11 @@ MESES_NOMBRE = [
 
 @router.get("/calendario")
 def ver_calendario(request: Request, user=Depends(require_login), anio: int = 0, mes: int = 0, dia: str = ""):
-    hoy = date.today()
+    hoy = tiempo.hoy()
+    # Valores fuera de rango (enlace manipulado o mal copiado) hacían fallar
+    # calendar.monthdayscalendar con error 500: se vuelve al mes actual.
+    if not 1 <= mes <= 12 or not 1 <= anio <= 9999:
+        anio, mes = 0, 0
     anio = anio or hoy.year
     mes = mes or hoy.month
     state = firebase.get_state()
