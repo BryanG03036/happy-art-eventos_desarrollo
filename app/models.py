@@ -443,9 +443,10 @@ def evento_realizado(c, ahora=None):
 def fmt_hora(time_str):
     if not time_str:
         return ""
-    h, minute = time_str.split(":")
+    h, minute = time_str.split(":")[:2]
     hr = int(h)
-    hr12 = hr - 12 if hr > 12 else hr
+    # 00:xx es 12:xx AM (antes se mostraba "0:30 AM").
+    hr12 = 12 if hr == 0 else (hr - 12 if hr > 12 else hr)
     ampm = "PM" if hr >= 12 else "AM"
     return f"{hr12}:{minute} {ampm}"
 
