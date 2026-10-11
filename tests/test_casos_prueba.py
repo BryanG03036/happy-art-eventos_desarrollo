@@ -352,8 +352,10 @@ def test_cp13_productos_bajo_minimo_aparecen_en_alertas(login, rol):
     assert "MAQUINA DE BURBUJAS" in texto and "MANTEL BLANCO" in texto and "MESA REDONDA" in texto
     assert "SILLA PLASTICA" not in texto and "TITERES" not in texto
     # Agotado (stock 0) en rojo; bajo el mínimo en amarillo
-    assert re.search(r'border-danger[^"]*">\s*<div class="card-body">\s*<div class="fw-bold">MAQUINA DE BURBUJAS', html)
-    assert re.search(r'border-warning[^"]*">\s*<div class="card-body">\s*<div class="fw-bold">MANTEL BLANCO', html)
+    tarjetas = re.findall(r'<div class="card h-100 (border-\w+).*?<div class="fw-bold">([^<]+)<', html, re.S)
+    colores = {nombre: borde for borde, nombre in tarjetas}
+    assert colores["MAQUINA DE BURBUJAS"] == "border-danger"
+    assert colores["MANTEL BLANCO"] == "border-warning"
 
 
 # ── CP-14 · Comisiones: comisión semanal propia ──────────────────────────────
