@@ -1,3 +1,4 @@
+# Firebase en memoria con datos de prueba.
 import copy
 import datetime as dt
 
@@ -13,7 +14,7 @@ USUARIOS = {
 }
 
 
-# Colombia no tiene horario de verano: UTC-5 fijo.
+# UTC-5 fijo
 BOGOTA = dt.timezone(dt.timedelta(hours=-5))
 
 

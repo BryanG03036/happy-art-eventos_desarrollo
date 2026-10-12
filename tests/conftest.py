@@ -1,3 +1,4 @@
+# Fixtures de la suite: Firebase en memoria y reloj fijo.
 import warnings
 
 import pytest
@@ -12,7 +13,7 @@ _FAKE = fake_firebase.instalar()
 
 from app.main import app  # noqa: E402
 
-# 12:00 en Bogotá = 17:00 UTC
+# 12:00 Bogotá
 HOY_PRUEBAS = "2026-10-07 17:00:00"
 
 

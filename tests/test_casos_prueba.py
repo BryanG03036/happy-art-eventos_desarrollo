@@ -1,10 +1,3 @@
-"""Casos de prueba CP-01 a CP-15 del Plan de Pruebas de EventStock (sección 5).
-
-Cada prueba replica el caso del plan contra la app real (FastAPI +
-TestClient) con el Firebase de pruebas en memoria. Los resultados esperados
-de cálculo (comisión, valor total, hora en bodega) se comparan contra un
-valor calculado a mano, como pide la estrategia de pruebas (sección 3).
-"""
 import io
 import re
 
@@ -23,7 +16,7 @@ def _texto(html):
     return re.sub(r"\s+", " ", re.sub(r"<[^>]+>", " ", html))
 
 
-# ── CP-01 · Autenticación: login con credenciales válidas ─────────────────────
+# CP-01: login
 @pytest.mark.parametrize("rol,destino", [
     ("admin", "/dashboard"), ("asesor", "/ventas"), ("bodega", "/inventario"),
 ])
@@ -44,8 +37,6 @@ def test_cp01_login_redirige_a_vista_del_rol(login, rol, destino):
     ("admin", "/dashboard"), ("asesor", "/ventas"), ("bodega", "/inventario"),
 ])
 def test_cp01_con_sesion_abierta_la_raiz_lleva_a_la_vista_del_rol(login, rol, destino):
-    """Volver a entrar a la app (raíz o /login) con la sesión abierta debe
-    llevar a la vista inicial del rol, no a una página de acceso denegado."""
     cliente = login(rol)
     for ruta in ("/", "/login"):
         r = cliente.get(ruta)
@@ -62,7 +53,7 @@ def test_cp01_login_con_clave_incorrecta_se_rechaza(fake):
     assert "incorrectos" in r.text
 
 
-# ── CP-02 · Autenticación: acceso a una ruta fuera del rol ─────────────────────
+# CP-02: acceso por rol
 @pytest.mark.parametrize("ruta", ["/inventario", "/movimientos", "/prestamos", "/personal", "/dashboard", "/alertas"])
 def test_cp02_asesor_recibe_403_fuera_de_su_rol(login, ruta):
     r = login("asesor").get(ruta, follow_redirects=False)
@@ -76,19 +67,16 @@ def test_cp02_bodega_recibe_403_fuera_de_su_rol(login, ruta):
 
 @pytest.mark.parametrize("ruta", ["/contratos/1/pdf", "/contratos/descargar-fecha?fecha=2026-10-03"])
 def test_cp02_bodega_no_descarga_contratos(login, ruta):
-    """Los contratos (datos de clientes y valores) no son del rol bodega."""
     r = login("bodega").get(ruta, follow_redirects=False)
     assert r.status_code == 403
     assert not r.content.startswith(b"%PDF") and not r.content.startswith(b"PK")
 
 
 def test_cp02_asesor_no_descarga_pdf_de_contrato_ajeno(login):
-    """La lista ya muestra '🔒 Solo el asesor titular' para los contratos de
-    otros asesores; la URL directa tampoco debe entregar el PDF."""
     assert login("asesor").get("/contratos/2/pdf").status_code == 403
 
 
-# ── CP-03 · Inventario: crear artículo con SKU duplicado ───────────────────────
+# CP-03: SKU duplicado
 def test_cp03_crear_articulo_con_sku_duplicado_se_rechaza(login, fake):
     admin = login("admin")
     antes = len(fake.estado["productos"])
@@ -106,7 +94,6 @@ def test_cp03_sku_duplicado_sin_importar_mayusculas_ni_espacios(login, fake, sku
 
 
 def test_cp03_bodega_no_puede_dar_de_alta_articulos(login, fake):
-    """Regla heredada del sistema original: el alta/edición/baja es solo de admin."""
     bodega = login("bodega")
     antes = len(fake.estado["productos"])
     bodega.post("/inventario/nuevo", data={**ARTICULO_BASE, "sku": "TEA-01"}, follow_redirects=False)
@@ -114,7 +101,7 @@ def test_cp03_bodega_no_puede_dar_de_alta_articulos(login, fake):
     assert len(fake.estado["productos"]) == antes
 
 
-# ── CP-04 · Movimientos: salida mayor al stock disponible ─────────────────────
+# CP-04: stock insuficiente
 @pytest.mark.parametrize("rol", ["admin", "bodega"])
 def test_cp04_salida_mayor_al_stock_se_rechaza(login, fake, rol):
     cliente = login(rol)
@@ -125,7 +112,7 @@ def test_cp04_salida_mayor_al_stock_se_rechaza(login, fake, rol):
     assert fake.estado["movimientos"] == []
 
 
-# ── CP-05 · Préstamos: completar el wizard y confirmar material ───────────────
+# CP-05: préstamo
 @pytest.mark.parametrize("rol", ["admin", "bodega"])
 def test_cp05_wizard_de_prestamo_descuenta_stock_y_crea_movimiento(login, fake, rol):
     cliente = login(rol)
@@ -144,7 +131,7 @@ def test_cp05_wizard_de_prestamo_descuenta_stock_y_crea_movimiento(login, fake, 
     assert all(m["qty"] < 0 for m in st["movimientos"])
 
 
-# ── CP-06 · Ventas: contrato con Paquete Personalizado ───────────────────────
+# CP-06: paquete personalizado
 @pytest.mark.parametrize("rol", ["asesor", "admin"])
 def test_cp06_contrato_paquete_personalizado(login, fake, rol):
     cliente = login(rol)
@@ -169,7 +156,7 @@ def test_cp06_personalizado_sin_valor_se_rechaza(login, fake):
     assert len(fake.estado["contratos"]) == 5
 
 
-# ── CP-07 · Ventas: contrato con transporte intermunicipal ───────────────────
+# CP-07: transporte
 @pytest.mark.parametrize("rol", ["asesor", "admin"])
 def test_cp07_valor_total_es_paquete_mas_transporte(login, fake, rol):
     from app.models import valor_total_contrato
@@ -182,13 +169,13 @@ def test_cp07_valor_total_es_paquete_mas_transporte(login, fake, rol):
     }, follow_redirects=False)
     c = fake.estado["contratos"][-1]
     assert (c["valor"], c["transporte"]) == (179000, 60000)
-    assert valor_total_contrato(c) == 239000  # 179.000 + 60.000, calculado a mano
+    assert valor_total_contrato(c) == 239000  # 179.000 + 60.000
     assert "$239.000" in cliente.get("/contratos").text
 
 
-# ── CP-08 · Contratos: editar un contrato de otro asesor ─────────────────────
+# CP-08: editar contrato ajeno
 def test_cp08_asesor_no_puede_editar_contrato_ajeno(login, fake):
-    asesor = login("asesor")  # brayang; el contrato 2 es de eduardv
+    asesor = login("asesor")  # contrato 2 es de otro asesor
     r = asesor.get("/contratos/2/editar", follow_redirects=False)
     assert r.headers["location"] == "/contratos"
     asesor.post("/contratos/2/guardar", data={"fecha": "2026-10-21", "cliente": "Cambiado", "tel1": "3102112655"},
@@ -205,10 +192,10 @@ def test_cp08_asesor_titular_y_admin_si_pueden_editar(login):
     assert login("admin").get("/contratos/2/editar").status_code == 200
 
 
-# ── CP-09 · Contratos: descargar PDF ─────────────────────────────────────────
+# CP-09: PDF
 @pytest.mark.parametrize("rol,contrato_id", [
-    ("admin", 1), ("admin", 2),      # 1 = Happy Art, 2 = Conde Eventos
-    ("asesor", 1), ("asesor2", 2),   # cada asesor descarga sus propios contratos
+    ("admin", 1), ("admin", 2),  # Happy Art y Conde
+    ("asesor", 1), ("asesor2", 2),  # contratos propios
 ])
 def test_cp09_descarga_pdf_de_contrato(login, rol, contrato_id):
     r = login(rol).get(f"/contratos/{contrato_id}/pdf")
@@ -218,7 +205,6 @@ def test_cp09_descarga_pdf_de_contrato(login, rol, contrato_id):
 
 
 def _capturar_html_pdf(monkeypatch):
-    """Sustituye WeasyPrint para inspeccionar el HTML con el que se arma el PDF."""
     from app.services import pdf
 
     capturado = {}
@@ -235,8 +221,6 @@ def _capturar_html_pdf(monkeypatch):
 
 
 def test_cp09_pdf_con_caracteres_especiales_en_el_cliente(login, fake):
-    """Nombres con tilde o con el apóstrofo tipográfico (’) que ponen los
-    teclados de celular deben descargarse con nombre de archivo correcto."""
     fake.estado["contratos"][0]["cliente"] = "Ana O’Neil Gómez"
     r = login("admin").get("/contratos/1/pdf")
     assert r.status_code == 200 and r.content.startswith(b"%PDF")
@@ -246,7 +230,7 @@ def test_cp09_pdf_con_caracteres_especiales_en_el_cliente(login, fake):
 
 def test_cp09_pdf_de_conde_muestra_el_nombre_comercial_de_conde(login, monkeypatch):
     capturado = _capturar_html_pdf(monkeypatch)
-    login("admin").get("/contratos/2/pdf")  # Conde Eventos, paquete Happy Chiquiteka
+    login("admin").get("/contratos/2/pdf")  # Conde Eventos
     pk = next(p for p in PAQUETES if p["nombre"] == "Happy Chiquiteka")
     texto = _texto(capturado["html"])
     assert f"Tipo de Paquete {pk['nombreConde']}" in texto
@@ -254,7 +238,7 @@ def test_cp09_pdf_de_conde_muestra_el_nombre_comercial_de_conde(login, monkeypat
     assert "Happy Chiquiteka" not in texto
 
 
-# ── CP-10 · Personal: fecha no disponible ────────────────────────────────────
+# CP-10: personal no disponible
 def test_cp10_persona_no_disponible_no_es_asignable(login, fake):
     admin = login("admin")
     asesor = login("asesor")
@@ -264,15 +248,13 @@ def test_cp10_persona_no_disponible_no_es_asignable(login, fake):
                                             "cliente": "Evento CP10", "tel1": "3102112655", "pers_recreador": "2"})
     cid = fake.estado["contratos"][-1]["id"]
     html = admin.get(f"/contratos/{cid}/programar-personal").text
-    assert re.search(r'name="sel__recreador" value="2"\s+disabled', html)  # Carlos: deshabilitado
+    assert re.search(r'name="sel__recreador" value="2"\s+disabled', html)  # no disponible
     assert "Marcado como no disponible esta fecha" in html
     admin.post(f"/contratos/{cid}/programar-personal", data={"sel__recreador": ["2", "3"]}, follow_redirects=False)
     assert fake.estado["contratos"][-1]["personalAsignado"]["recreador"] == []
 
 
 def test_cp10_al_cambiar_la_fecha_no_queda_asignado_personal_no_disponible(login, fake):
-    """Diana (id 3) está programada en el contrato 1. Si el asesor mueve el
-    evento a un día en que Diana no está disponible, no puede seguir asignada."""
     fake.estado["personal"][2]["noDisponible"] = ["2026-10-25"]
     asesor = login("asesor")
     asesor.post("/contratos/1/guardar", data={
@@ -281,13 +263,13 @@ def test_cp10_al_cambiar_la_fecha_no_queda_asignado_personal_no_disponible(login
     c = fake.estado["contratos"][0]
     assert c["fecha"] == "2026-10-25"
     assert 3 not in c["personalAsignado"]["recreador"]
-    assert c["personalAsignado"]["logistico"] == [1]  # Ana sí está disponible
+    assert c["personalAsignado"]["logistico"] == [1]  # disponible
 
 
-# ── CP-11 · Calendario: hora en bodega ───────────────────────────────────────
+# CP-11: hora en bodega
 @pytest.mark.parametrize("rol", ["admin", "asesor", "bodega"])
 def test_cp11_hora_en_bodega_es_3h_antes_de_la_hora_mas_temprana(login, rol):
-    # Contrato 1: decoración 1:00 PM, recreación 3:00 PM -> bodega 10:00 AM
+    # 1:00 PM - 3h = 10:00 AM
     html = login(rol).get("/calendario?anio=2026&mes=10&dia=2026-10-03").text
     assert re.search(r'text-nowrap">10:00 AM<', html)
 
@@ -300,7 +282,7 @@ def test_cp11_hora_en_bodega_calculos():
     assert fmt_hora_bodega({"hora": "02:00", "horaDecoracion": ""}) == "11:00 PM (día anterior)"
 
 
-# ── CP-12 · Dashboard: cargar plantilla Excel de encuestas ───────────────────
+# CP-12: encuestas
 def _excel_encuestas(filas):
     wb = openpyxl.Workbook()
     ws = wb.active
@@ -327,14 +309,13 @@ def test_cp12_carga_de_encuestas_se_refleja_en_la_tabla(login, fake):
     admin.post("/dashboard/encuestas/cargar", files={"archivo": ("encuestas.xlsx", archivo)}, follow_redirects=False)
     assert flash(admin, "/dashboard") == ("success", "✅ 3 encuesta(s) importada(s)")
     texto = _texto(admin.get("/dashboard").text)
-    # 3 oct: 2 encuestas -> promedio recomendación (10+8)/2 = 9.0, satisfacción 4.5
+    # 3 oct: promedio 9.0 y 4.5
     assert "03 oct 2026 (Sábado) 2 9.0 4.5 4.5 4.0" in texto
     assert "27 sep 2026 (Domingo) 1 9.0 5.0 4.0 4.0" in texto
 
 
 @pytest.mark.parametrize("fecha_texto", ["3/10/2026 14:30:22", "2026-10-03 14:30:00"])
 def test_cp12_fechas_con_hora_no_rompen_el_dashboard(login, fake, fecha_texto):
-    """Microsoft Forms exporta la fecha como texto con hora."""
     admin = login("admin")
     archivo = _excel_encuestas([[1, "Ana", "3102112655", fecha_texto, 10, 5, 5, 5, "", ""]])
     admin.post("/dashboard/encuestas/cargar", files={"archivo": ("e.xlsx", archivo)}, follow_redirects=False)
@@ -344,39 +325,39 @@ def test_cp12_fechas_con_hora_no_rompen_el_dashboard(login, fake, fecha_texto):
     assert "03 oct 2026 (Sábado) 1 10.0 5.0 5.0 5.0" in _texto(r.text)
 
 
-# ── CP-13 · Alertas: stock por debajo del mínimo ─────────────────────────────
+# CP-13: alertas
 @pytest.mark.parametrize("rol", ["admin", "bodega"])
 def test_cp13_productos_bajo_minimo_aparecen_en_alertas(login, rol):
     html = login(rol).get("/alertas").text
     texto = _texto(html)
     assert "MAQUINA DE BURBUJAS" in texto and "MANTEL BLANCO" in texto and "MESA REDONDA" in texto
     assert "SILLA PLASTICA" not in texto and "TITERES" not in texto
-    # Agotado (stock 0) en rojo; bajo el mínimo en amarillo
+    # Agotado rojo, bajo amarillo
     tarjetas = re.findall(r'<div class="card h-100 (border-\w+).*?<div class="fw-bold">([^<]+)<', html, re.S)
     colores = {nombre: borde for borde, nombre in tarjetas}
     assert colores["MAQUINA DE BURBUJAS"] == "border-danger"
     assert colores["MANTEL BLANCO"] == "border-warning"
 
 
-# ── CP-14 · Comisiones: comisión semanal propia ──────────────────────────────
+# CP-14: comisión semanal
 def test_cp14_comision_semanal_es_10_por_ciento_sin_transporte(login):
     texto = _texto(login("asesor").get("/comisiones").text)
-    # Semana 5–11 oct: brayang vendió el contrato 3 (Happy Personaje, $229.000) -> 10% = $22.900
+    # 10% de 229.000
     assert re.search(r"Esta semana \$22\.900 1 evento", texto)
     assert "5 – 11 Oct 2026 esta semana" in texto
 
 
 def test_cp14_comision_excluye_transporte(login):
-    # eduardv: contrato 2 ($290.000 + $50.000 de transporte) y contrato 5 ($395.000) en esta semana
+    # Sin transporte: 29.000 + 39.500
     texto = _texto(login("asesor2").get("/comisiones").text)
-    assert re.search(r"Esta semana \$68\.500 2 evento", texto)  # 29.000 + 39.500
+    assert re.search(r"Esta semana \$68\.500 2 evento", texto)
 
 
-# ── CP-15 · Comisiones: ranking mensual y validación de quincenas (admin) ────
+# CP-15: ranking y quincenas
 def test_cp15_ranking_ordenado_y_quincenas(login):
     texto = _texto(login("admin").get("/comisiones?mes=2026-10").text)
     i_ed, i_br, i_pa = texto.find("eduardv 2"), texto.find("brayang 2"), texto.find("paulal 0")
-    assert -1 not in (i_ed, i_br, i_pa) and i_ed < i_br < i_pa  # 68.500 > 40.800 > 0
+    assert -1 not in (i_ed, i_br, i_pa) and i_ed < i_br < i_pa  # orden por comisión
     assert "Del 1 al 14 · 1/2 realizados · 1 pendiente(s)" in texto
     assert "Del 15 al fin de mes · 0/2 realizados · 2 pendiente(s)" in texto
     assert "3 Oct Laura Gómez brayang $17.900 ✅ Realizado" in texto
