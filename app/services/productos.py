@@ -5,9 +5,25 @@ devolverPrestamo de legacy/js/main.js. Cada función recibe el `state` completo
 llama es responsable de firebase.save_state(state) después."""
 import time
 
+from app.models import NumeroInvalido, entero
+
 
 class ValidationError(Exception):
     pass
+
+
+def _entero(valor, campo, minimo=None):
+    try:
+        return entero(valor, campo, minimo=minimo)
+    except NumeroInvalido as e:
+        raise ValidationError(str(e)) from None
+
+
+def _precio(valor):
+    try:
+        return float(str(valor or 0).replace(",", "."))
+    except ValueError:
+        raise ValidationError("Precio: ingresa un número válido") from None
 
 
 CATEGORIAS = [
@@ -44,16 +60,16 @@ def crear_producto(state, data):
         raise ValidationError("Completa código, nombre y categoría")
     if _sku_en_uso(state, sku):
         raise ValidationError("Ese código ya existe")
-    stock = int(data.get("stock") or 0)
+    stock = _entero(data.get("stock"), "Stock", minimo=0)
     p = {
         "id": state["nextId"],
         "sku": sku,
         "nombre": nombre,
         "cat": cat,
         "evento": data.get("evento") or "Ambos",
-        "precio": float(data.get("precio") or 0),
+        "precio": _precio(data.get("precio")),
         "stock": stock,
-        "min": int(data.get("min") or 0),
+        "min": _entero(data.get("min"), "Stock mínimo", minimo=0),
         "unidad": data.get("unidad") or "Unidad",
         "proveedor": (data.get("proveedor") or "").strip(),
         "ubicacion": (data.get("ubicacion") or "").strip(),
@@ -81,14 +97,14 @@ def editar_producto(state, id_, data):
         raise ValidationError("Completa código, nombre y categoría")
     if _sku_en_uso(state, sku, excluir_id=id_):
         raise ValidationError("Ese código ya existe")
-    stock = int(data.get("stock") or 0)
+    stock = _entero(data.get("stock"), "Stock", minimo=0)
     diff = stock - p["stock"]
     p.update({
         "sku": sku, "nombre": nombre, "cat": cat,
         "evento": data.get("evento") or "Ambos",
-        "precio": float(data.get("precio") or 0),
+        "precio": _precio(data.get("precio")),
         "stock": stock,
-        "min": int(data.get("min") or 0),
+        "min": _entero(data.get("min"), "Stock mínimo", minimo=0),
         "unidad": data.get("unidad") or "Unidad",
         "proveedor": (data.get("proveedor") or "").strip(),
         "ubicacion": (data.get("ubicacion") or "").strip(),
@@ -118,7 +134,7 @@ def registrar_movimiento(state, data):
     tipo = data["tipo"]
     if tipo not in TIPOS_MOVIMIENTO:
         raise ValidationError("Tipo de movimiento no válido")
-    qty = int(data.get("qty") or 0)
+    qty = _entero(data.get("qty"), "Cantidad")
     evento = (data.get("evento") or "").strip()
     nota = (data.get("nota") or "").strip()
     if not prod_id:
@@ -147,7 +163,7 @@ def registrar_movimiento(state, data):
 
 def registrar_prestamo(state, data):
     prod_id = int(data["prodId"])
-    qty = int(data.get("qty") or 0)
+    qty = _entero(data.get("qty"), "Cantidad")
     cliente = (data.get("cliente") or "").strip()
     retorno = data.get("retorno") or ""
     nota = (data.get("nota") or "").strip()

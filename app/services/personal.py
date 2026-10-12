@@ -1,12 +1,26 @@
+"""CRUD de personal y disponibilidad por fecha, portado de
+guardarPersonal/eliminarPersonal/marcarNoDisponible/quitarNoDisponible del
+Happy Art.zip (sprint 3): incluye el rol "asesor" (se registra como staff,
+aunque no se programa por evento), número de cuenta de pago, y el campo de
+disponibilidad renombrado a noDisponible."""
 import time
 
 from datetime import datetime
 
-from app.models import ROLES_PERSONAL, contratos_ocupado_en_fecha, telefono_valido
+from app.models import ROLES_PERSONAL, NumeroInvalido, contratos_ocupado_en_fecha, entero, telefono_valido
 
 
 class ValidationError(Exception):
     pass
+
+
+def _edad(valor):
+    if not str(valor or "").strip():
+        return None
+    try:
+        return entero(valor, "Edad", minimo=0)
+    except NumeroInvalido as e:
+        raise ValidationError(str(e)) from None
 
 
 def crear_personal(state, data):
@@ -16,7 +30,7 @@ def crear_personal(state, data):
     telefono = (data.get("telefono") or "").strip()
     if telefono and not telefono_valido(telefono):
         raise ValidationError("El teléfono debe tener 10 dígitos")
-    edad = int(data["edad"]) if data.get("edad") else None
+    edad = _edad(data.get("edad"))
     p = {
         "id": state["nextPersonalId"], "nombre": nombre, "rol": data.get("rol") or "logistico",
         "edad": edad, "telefono": telefono, "cuentaTipo": data.get("cuentaTipo") or "nequi",
@@ -39,7 +53,7 @@ def editar_personal(state, id_, data):
     telefono = (data.get("telefono") or "").strip()
     if telefono and not telefono_valido(telefono):
         raise ValidationError("El teléfono debe tener 10 dígitos")
-    edad = int(data["edad"]) if data.get("edad") else None
+    edad = _edad(data.get("edad"))
     p.update({
         "nombre": nombre, "rol": data.get("rol") or "logistico", "edad": edad,
         "telefono": telefono, "cuentaTipo": data.get("cuentaTipo") or "nequi",
