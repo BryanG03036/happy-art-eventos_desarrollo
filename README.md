@@ -121,11 +121,38 @@ algo que se pueda generar automáticamente:
 
 ## Pruebas
 
-No hay una base de datos Firebase real disponible en este entorno de
-desarrollo — para probar los flujos completos (login, CRUD, generación de
-PDF, etc.) sin depender de credenciales reales, se puede sustituir
+Las pruebas nunca tocan el Firebase real: `tests/fake_firebase.py` sustituye
 `app.firebase.get_state`/`save_state`/`sign_in_with_password`/
-`verify_id_token` por versiones en memoria, como se hizo durante el
-desarrollo de este puerto. La lógica de negocio pura vive en `app/services/`
-y `app/models.py`, sin dependencias de FastAPI ni Firebase, por lo que
-también se puede probar de forma aislada.
+`verify_id_token` por versiones en memoria con un conjunto fijo de datos de
+prueba (productos, contratos de Happy Art y Conde Eventos, personal con y
+sin disponibilidad).
+
+```bash
+pip install -r requirements-dev.txt
+python -m pytest            # casos CP-01..CP-15 del plan + regresión de defectos
+```
+
+- `tests/test_casos_prueba.py` — los 15 casos de la sección 5 del Plan de
+  Pruebas, uno o más tests por caso.
+- `tests/test_defectos.py` — regresión de cada defecto encontrado (DEF-xx);
+  el ID del defecto aparece en el nombre de la prueba y en el commit que lo
+  corrigió.
+- La fecha "de hoy" se congela en el 7 de octubre de 2026 (ciclo de pruebas)
+  para que comisiones, quincenas y calendario den siempre el mismo resultado.
+
+Pruebas manuales en el navegador con los mismos datos:
+
+```bash
+python -m tests.servidor_pruebas      # http://127.0.0.1:8000
+```
+
+Usuarios de prueba (contraseña `prueba123`): `admin@happyarteventos.com`,
+`brayang@asesoreventos.com` y `eduardv@asesoreventos.com` (asesores),
+`jennyer@happyarteventos.com` (bodega). `POST /__pruebas/reiniciar` vuelve a
+los datos iniciales (solo existe en el servidor de pruebas).
+
+### Zona horaria
+
+Las fechas de negocio (semana de comisiones, quincenas, "hoy" del calendario,
+retorno de préstamos) se calculan en `TIMEZONE` (por defecto
+`America/Bogota`) aunque el servidor esté en UTC, como en Render.
