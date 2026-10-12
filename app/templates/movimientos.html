@@ -64,7 +64,11 @@ function movTipoCambio(sel){
   document.getElementById('movAyudaAjuste').style.display = ajuste ? 'block' : 'none';
 }
 </script>
+{% endblock %}
+{% block extra_scripts %}
 {% if prod_preseleccionado %}
+{# Debe ir en extra_scripts: este bloque se imprime después de cargar
+   bootstrap.bundle.js; dentro de content fallaba con "bootstrap is not defined". #}
 <script>new bootstrap.Modal(document.getElementById('modalMov')).show();</script>
 {% endif %}
 {% endblock %}
