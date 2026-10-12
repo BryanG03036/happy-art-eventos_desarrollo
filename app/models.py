@@ -292,6 +292,36 @@ def _buscar_especificacion(item_name):
     )
 
 
+# ── Lectura segura de números de formularios ───────────────────────────────
+
+class NumeroInvalido(ValueError):
+    """El texto de un campo numérico no es un entero válido."""
+
+
+def entero(valor, campo, minimo=None, defecto=0):
+    """Convierte el valor de un campo de formulario a entero.
+
+    Los <input type="number"> del navegador aceptan notación científica
+    ('1e2') y un formulario alterado puede mandar cualquier texto; int()
+    fallaba con ValueError y el usuario veía la página de error 500. Aquí
+    se rechaza con un mensaje claro (NumeroInvalido) que cada módulo
+    convierte en su ValidationError."""
+    s = str(valor if valor is not None else "").strip()
+    if s == "":
+        return defecto
+    if not re.fullmatch(r"[+-]?\d+", s):
+        raise NumeroInvalido(f"{campo}: ingresa un número entero (sin letras, puntos ni decimales)")
+    n = int(s)
+    if minimo is not None and n < minimo:
+        raise NumeroInvalido(f"{campo}: debe ser mayor o igual a {minimo}")
+    return n
+
+
+def monto(valor):
+    """'$1.500.000' -> 1500000 (los montos se escriben con puntos de miles)."""
+    return int(re.sub(r"[^0-9]", "", str(valor or "")) or 0)
+
+
 # ── Formato de números / fechas ─────────────────────────────────────────────
 
 def _miles_es_co(n):
@@ -311,6 +341,12 @@ def _parse_fecha(d):
 
     if hasattr(d, "year"):
         return d
+    if isinstance(d, (int, float)) and not isinstance(d, bool):
+        # Préstamos y movimientos guardan la fecha como timestamp en ms
+        # (Date.now() del sistema original); antes se mostraba el número.
+        from app import tiempo
+
+        return tiempo.desde_ms(d)
     s = str(d).strip().replace("Z", "+00:00")
     try:
         return datetime.fromisoformat(s)

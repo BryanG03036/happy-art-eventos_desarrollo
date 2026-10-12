@@ -5,6 +5,7 @@ import re
 from datetime import date
 
 from app.models import (
+    NumeroInvalido, entero,
     PAQUETES, ROLES_PERSONAL, contratos_ocupado_en_fecha, esta_disponible, get_persona, telefono_valido,
 )
 from app.services.calculos import puede_editar_contrato
@@ -18,6 +19,13 @@ class ValidationError(Exception):
 
 class ForbiddenError(Exception):
     pass
+
+
+def _cupos(form, campo):
+    try:
+        return entero(form.get(campo), "Personal necesario", minimo=0)
+    except NumeroInvalido as e:
+        raise ValidationError(str(e)) from None
 
 
 def get_contrato(state, id_):
@@ -62,10 +70,10 @@ def editar_contrato(state, contrato_id, form, pk_id_actual, items_editados, vari
     c["festejado"] = (form.get("festejado") or "").strip()
 
     nuevo_req = {
-        "logistico": int(form.get("pers_logistico") or 0),
-        "recreador": int(form.get("pers_recreador") or 0),
-        "coordinador": int(form.get("pers_coordinador") or 0),
-        "operario": int(form.get("pers_operario") or 0),
+        "logistico": _cupos(form, "pers_logistico"),
+        "recreador": _cupos(form, "pers_recreador"),
+        "coordinador": _cupos(form, "pers_coordinador"),
+        "operario": _cupos(form, "pers_operario"),
     }
     c["personalRequerido"] = nuevo_req
     c.setdefault("personalAsignado", {"logistico": [], "recreador": [], "coordinador": [], "operario": []})

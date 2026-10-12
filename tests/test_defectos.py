@@ -1,3 +1,8 @@
+"""Pruebas de regresión de los defectos encontrados durante la ejecución del
+plan (pruebas exploratorias alrededor de cada caso). Los defectos que caen
+dentro del alcance literal de un caso CP-xx se prueban en
+test_casos_prueba.py; aquí quedan los demás. Cada prueba lleva el ID del
+defecto (DEF-xx) del registro de defectos."""
 import re
 
 import pytest
@@ -123,12 +128,16 @@ def test_def15_formato_de_hora_medianoche():
 # DEF-16 · Fechas calculadas con la zona horaria del servidor (UTC en Render)
 # freeze_time(..., tz_offset=0) simula un servidor configurado en UTC.
 def test_def16_quincena_usa_hora_de_colombia(login):
+    """13 oct 2026, 8:00 p. m. en Bogotá = 14 oct 01:00 UTC. El evento del 14
+    de octubre (contrato 3) todavía NO se ha realizado."""
     with freeze_time("2026-10-14 01:00:00", tz_offset=0):
         texto = _texto(login("admin").get("/comisiones?mes=2026-10").text)
     assert "14 Oct Marta Díaz brayang $22.900 ⏳ Pendiente" in texto
 
 
 def test_def16_semana_de_venta_usa_hora_de_colombia():
+    """Venta registrada el domingo 11 oct a las 9:00 p. m. (Bogotá) pertenece
+    a la semana del 5 al 11, aunque en UTC ya sea lunes 12."""
     import datetime as dt
 
     from app.models import fecha_venta_contrato
@@ -168,9 +177,10 @@ def test_def19_comisiones_sin_advertencias_de_obsolescencia(login):
     assert not [a for a in avisos if "TemplateResponse" in str(a.message)]
 
 
-
 # DEF-20 · El enlace "Registrar entrada" (Alertas/Inventario) no abre el formulario
 def test_def20_modal_de_movimiento_se_abre_despues_de_cargar_bootstrap(login):
+    """/movimientos?prod=X abre el modal con un script en línea; debe ejecutarse
+    después de cargar bootstrap.bundle.js o falla con 'bootstrap is not defined'."""
     html = login("bodega").get("/movimientos?prod=12").text
     i_bundle = html.find("bootstrap.bundle.min.js")
     i_modal = html.find("new bootstrap.Modal")
@@ -193,5 +203,8 @@ def test_def21_lista_de_prestamos_muestra_fechas_legibles(login):
     bodega = login("bodega")
     bodega.post("/prestamos/nuevo", data={"prodId": "1", "qty": "1", "cliente": "Familia Rojas", "retorno": "2026-10-10"})
     texto = _texto(bodega.get("/prestamos").text)
-    assert "Salida: 07 oct 2026" in texto and "Retorno: 10 oct 2026" in texto
-    assert "07 oct, 12:00" in _texto(bodega.get("/movimientos").text)
+    # La salida se registra con la hora real del reloj; el retorno es la fecha elegida.
+    assert re.search(r"Salida: \d{2} [a-z]{3} \d{4}", texto) and "Retorno: 10 oct 2026" in texto
+    movimientos = _texto(bodega.get("/movimientos").text)
+    assert re.search(r"PRESTAMO TEATRINO \d{2} [a-z]{3}, \d{2}:\d{2}", movimientos)
+    assert not re.search(r"\b\d{13}\b", movimientos)

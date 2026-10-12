@@ -1,7 +1,11 @@
+"""Lógica del módulo Ventas (registro de contratos), portada de
+renderPaquetesGrid()/renderIncluidosList()/_pendientesVariantePaquete()/
+detectarLetrasNumero()/registrarVenta() en legacy/js/main.js."""
 import re
 import time
 
-from app.models import PAQUETES, _buscar_especificacion, fmt_precio, is_consumable, telefono_valido
+from app.models import PAQUETES, NumeroInvalido, _buscar_especificacion, entero, fmt_precio, is_consumable, \
+    telefono_valido
 from app.services.calculos import calc_stock_separado_por_fecha, match_inventario, match_inventario_multiple, \
     resolver_items_paquete_inventario
 
@@ -16,6 +20,14 @@ CATEGORIAS_PAQUETE = [
     {"id": "revelacion", "label": "🎀 Revelación de Género"},
     {"id": "personalizado", "label": "✨ Personalizado"},
 ]
+
+
+def _cupos(form, campo):
+    """Cantidad de personal requerido por rol: entero >= 0."""
+    try:
+        return entero(form.get(campo), "Personal necesario", minimo=0)
+    except NumeroInvalido as e:
+        raise ValidationError(str(e)) from None
 
 
 def get_paquete(pk_id):
@@ -178,10 +190,10 @@ def registrar_contrato(state, empresa, pk_id, form, variantes_sel, extras_sel, a
     transporte = int(re.sub(r"[^0-9]", "", form.get("transporte") or "") or 0)
 
     requerimientos_personal = {
-        "logistico": int(form.get("pers_logistico") or 0),
-        "recreador": int(form.get("pers_recreador") or 0),
-        "coordinador": int(form.get("pers_coordinador") or 0),
-        "operario": int(form.get("pers_operario") or 0),
+        "logistico": _cupos(form, "pers_logistico"),
+        "recreador": _cupos(form, "pers_recreador"),
+        "coordinador": _cupos(form, "pers_coordinador"),
+        "operario": _cupos(form, "pers_operario"),
     }
 
     contrato = {

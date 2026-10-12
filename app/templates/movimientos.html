@@ -37,13 +37,14 @@
             </select>
           </div>
           <div class="col-md-6"><label class="form-label">Tipo de movimiento</label>
-            <select class="form-select" name="tipo">
+            <select class="form-select" name="tipo" onchange="movTipoCambio(this)">
               <option value="entrada">📥 Entrada — compra / recepción</option>
               <option value="salida">📤 Salida — uso / despacho</option>
               <option value="ajuste">🔧 Ajuste de inventario</option>
             </select>
           </div>
-          <div class="col-md-6"><label class="form-label">Cantidad</label><input type="number" min="1" class="form-control" name="qty" required></div>
+          <div class="col-md-6"><label class="form-label">Cantidad</label><input type="number" min="1" step="1" class="form-control" name="qty" required>
+            <div class="form-text" id="movAyudaAjuste" style="display:none;">En un ajuste usa un número negativo para restar (ej: -3).</div></div>
           <div class="col-md-6"><label class="form-label">Evento / Cliente</label><input class="form-control" name="evento" placeholder="Ej: Boda García..."></div>
           <div class="col-12"><label class="form-label">Nota u observación</label><input class="form-control" name="nota" placeholder="Proveedor, número de orden, motivo..."></div>
         </div>
@@ -55,7 +56,19 @@
     </div>
   </div>
 </div>
+<script>
+function movTipoCambio(sel){
+  var qty = sel.form.querySelector('[name=qty]');
+  var ajuste = sel.value === 'ajuste';
+  if (ajuste) { qty.removeAttribute('min'); } else { qty.setAttribute('min', '1'); }
+  document.getElementById('movAyudaAjuste').style.display = ajuste ? 'block' : 'none';
+}
+</script>
+{% endblock %}
+{% block extra_scripts %}
 {% if prod_preseleccionado %}
+{# Debe ir en extra_scripts: este bloque se imprime después de cargar
+   bootstrap.bundle.js; dentro de content fallaba con "bootstrap is not defined". #}
 <script>new bootstrap.Modal(document.getElementById('modalMov')).show();</script>
 {% endif %}
 {% endblock %}

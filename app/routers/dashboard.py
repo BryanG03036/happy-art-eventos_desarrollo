@@ -81,7 +81,13 @@ def guardar_ajuste(request: Request, user=Depends(require_admin),
                     happyN: str = Form("0"), happyV: str = Form("0"),
                     condeN: str = Form("0"), condeV: str = Form("0")):
     state = firebase.get_state()
-    hn, hv, cn, cv = int(happyN or 0), int(happyV or 0), int(condeN or 0), int(condeV or 0)
+    try:
+        hn = models.entero(happyN, "Eventos Happy Art", minimo=0)
+        cn = models.entero(condeN, "Eventos Conde", minimo=0)
+    except models.NumeroInvalido as e:
+        request.session["flash"] = {"type": "danger", "text": str(e)}
+        return redirect_to(f"/dashboard?anio={anio}")
+    hv, cv = models.monto(happyV), models.monto(condeV)
     key = f"{anio}-{mes}"
     if not (hn or hv or cn or cv):
         state["contabAjustes"].pop(key, None)
