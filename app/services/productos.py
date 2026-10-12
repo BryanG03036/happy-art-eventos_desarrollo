@@ -123,7 +123,12 @@ def registrar_movimiento(state, data):
     nota = (data.get("nota") or "").strip()
     if not prod_id:
         raise ValidationError("Selecciona un artículo")
-    if qty <= 0:
+    if tipo == "ajuste":
+        # Un ajuste corrige el stock tras un conteo físico: puede sumar
+        # (positivo) o restar (negativo, p. ej. artículos perdidos o dañados).
+        if qty == 0:
+            raise ValidationError("El ajuste no puede ser 0 — usa un número negativo para restar")
+    elif qty <= 0:
         raise ValidationError("La cantidad debe ser mayor a 0")
     p = get_prod(state, prod_id)
     if not p:
