@@ -341,6 +341,12 @@ def _parse_fecha(d):
 
     if hasattr(d, "year"):
         return d
+    if isinstance(d, (int, float)) and not isinstance(d, bool):
+        # Préstamos y movimientos guardan la fecha como timestamp en ms
+        # (Date.now() del sistema original); antes se mostraba el número.
+        from app import tiempo
+
+        return tiempo.desde_ms(d)
     s = str(d).strip().replace("Z", "+00:00")
     try:
         return datetime.fromisoformat(s)
