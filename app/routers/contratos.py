@@ -1,6 +1,3 @@
-"""Módulo Contratos — historial, edición, borrado, programación de personal
-(admin) y descarga de PDF. Portado de la vista view-contratos y sus
-funciones en legacy/js/main.js."""
 import io
 import unicodedata
 import zipfile
@@ -24,12 +21,6 @@ router = APIRouter()
 
 
 def _content_disposition(tipo, filename):
-    """Cabecera Content-Disposition segura para cualquier nombre de cliente.
-
-    Las cabeceras HTTP solo admiten latin-1: un nombre con el apóstrofo
-    tipográfico (’) de los teclados de celular hacía fallar la respuesta
-    (error 500) y las tildes llegaban dañadas al navegador. Se envía un
-    nombre ASCII de respaldo y el nombre real en UTF-8 (RFC 6266 / 5987)."""
     ascii_ = unicodedata.normalize("NFKD", filename).encode("ascii", "ignore").decode("ascii")
     ascii_ = ascii_.replace('"', "").replace("\\", "") or "contrato.pdf"
     return f"{tipo}; filename=\"{ascii_}\"; filename*=UTF-8''{quote(filename, safe='')}"
@@ -319,12 +310,12 @@ async def guardar_edicion(id: int, request: Request, user=Depends(require_login)
         firebase.save_state(state)
         if liberados:
             request.session["flash"] = {"type": "warning", "text": (
-                f"⚠️ Se quitó de la programación a {', '.join(liberados)}: no está disponible el "
+                f"Se quitó de la programación a {', '.join(liberados)}: no está disponible el "
                 f"{c['fecha']}. El administrador debe reprogramar el personal.")}
         elif recorte:
-            request.session["flash"] = {"type": "warning", "text": "⚠️ Se ajustó el personal ya programado al nuevo límite solicitado"}
+            request.session["flash"] = {"type": "warning", "text": " Se ajustó el personal ya programado al nuevo límite solicitado"}
         else:
-            request.session["flash"] = {"type": "success", "text": "Contrato actualizado ✅"}
+            request.session["flash"] = {"type": "success", "text": "Contrato actualizado"}
         return redirect_to(f"/contratos/{id}/pdf")
     except svc.ForbiddenError as e:
         request.session["flash"] = {"type": "danger", "text": str(e)}
@@ -361,9 +352,9 @@ def programar_form(id: int, request: Request, user=Depends(require_admin)):
             deshabilitado = not marcado and (not disponible or bool(ocupado_en) or cupo_lleno)
             motivo = ""
             if not disponible:
-                motivo = "🚫 Marcado como no disponible esta fecha"
+                motivo = "Marcado como no disponible esta fecha"
             elif ocupado_en:
-                motivo = f"⚠️ Ya programado en otro evento ({ocupado_en[0]['cliente']}) este mismo día"
+                motivo = f"Ya programado en otro evento ({ocupado_en[0]['cliente']}) este mismo día"
             elif cupo_lleno:
                 motivo = f"Ya se completó el cupo de {necesarios}"
             opciones.append({

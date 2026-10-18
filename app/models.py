@@ -1,16 +1,3 @@
-"""Helpers puros de dominio, portados de legacy/js/models.js.
-
-En el SPA original estas funciones leían un objeto `state` global mutable
-mantenido en memoria del navegador y sincronizado en vivo con Firebase. Aquí,
-siguiendo la arquitectura sin estado por-request de app/firebase.py, cada
-función recibe explícitamente las listas/dicts que necesita (obtenidas de
-firebase.get_state() al inicio de cada request) en vez de leer un global.
-
-Los datos constantes (catálogos, roles, etc.) se cargaron en
-app/data/catalog.json mediante una extracción directa desde el
-legacy/js/models.js original (import dinámico + volcado a JSON), para
-garantizar que coinciden exactamente con el original.
-"""
 import json
 import re
 import unicodedata
@@ -21,9 +8,7 @@ _catalog = json.loads(_CATALOG_PATH.read_text(encoding="utf-8"))
 
 ROLES = _catalog["ROLES"]
 ROLES_PERSONAL = _catalog["ROLES_PERSONAL"]
-# Personal que se asigna por cupos a un evento (logístico/recreador/coordinador/
-# operario). "asesor" no se programa por evento, pero sí se registra como
-# integrante del staff en la sección Personal — de ahí ROLES_PERSONAL_STAFF.
+
 ROLES_PERSONAL_STAFF = ROLES_PERSONAL + [_catalog["ROL_PERSONAL_STAFF_EXTRA"]]
 CUENTAS_PAGO = _catalog["CUENTAS_PAGO"]
 RECUPERABLES_KEYWORDS = _catalog["RECUPERABLES_KEYWORDS"]
@@ -87,15 +72,12 @@ def get_persona(personal, id_):
 
 
 def esta_disponible(persona, fecha):
-    """Por defecto TODO el personal está disponible; solo hay marca explícita
-    cuando el admin lo puso como NO disponible para una fecha puntual."""
     if not persona or not fecha:
         return True
     return fecha not in (persona.get("noDisponible") or [])
 
 
 def persona_asignada_en_fecha(contratos, persona_id, fecha, excluir_contrato_id=None):
-    """¿Ya está asignada esta persona a OTRO contrato en la misma fecha?"""
     for c in contratos:
         if c.get("fecha") != fecha:
             continue
@@ -111,8 +93,6 @@ def persona_asignada_en_fecha(contratos, persona_id, fecha, excluir_contrato_id=
 
 
 def contratos_ocupado_en_fecha(contratos, persona_id, fecha, excluir_contrato_id=None):
-    """Lista de contratos (distintos de excluir_contrato_id) donde esta persona
-    ya quedó programada para la misma fecha."""
     encontrados = []
     for c in contratos:
         if excluir_contrato_id and c.get("id") == excluir_contrato_id:
@@ -150,7 +130,6 @@ def programacion_completa(c):
 
 
 def resolver_personal_asignado(personal, c):
-    """Nombres del personal ya asignado a un contrato, agrupados por rol."""
     asign = c.get("personalAsignado") or {}
     grupos = []
     for rol in ROLES_PERSONAL:
@@ -159,11 +138,6 @@ def resolver_personal_asignado(personal, c):
         if nombres:
             grupos.append({"rol": rol["id"], "label": rol["labelPlural"], "icono": rol["icon"], "nombres": nombres})
     return grupos
-
-
-# ── Programación por horario: el personal debe estar en bodega 3 horas antes
-# del inicio más temprano del evento (decoración si aplica; si no, la hora de
-# inicio de la recreación/animación). ──────────────────────────────────────
 
 def _minutos_desde_hora(time_str):
     if not time_str:
@@ -299,13 +273,6 @@ class NumeroInvalido(ValueError):
 
 
 def entero(valor, campo, minimo=None, defecto=0):
-    """Convierte el valor de un campo de formulario a entero.
-
-    Los <input type="number"> del navegador aceptan notación científica
-    ('1e2') y un formulario alterado puede mandar cualquier texto; int()
-    fallaba con ValueError y el usuario veía la página de error 500. Aquí
-    se rechaza con un mensaje claro (NumeroInvalido) que cada módulo
-    convierte en su ValidationError."""
     s = str(valor if valor is not None else "").strip()
     if s == "":
         return defecto
@@ -318,14 +285,12 @@ def entero(valor, campo, minimo=None, defecto=0):
 
 
 def monto(valor):
-    """'$1.500.000' -> 1500000 (los montos se escriben con puntos de miles)."""
     return int(re.sub(r"[^0-9]", "", str(valor or "")) or 0)
 
 
 # ── Formato de números / fechas ─────────────────────────────────────────────
 
 def _miles_es_co(n):
-    """Separador de miles con punto, como Number.toLocaleString('es-CO')."""
     entero = int(round(float(n)))
     return f"{entero:,}".replace(",", ".")
 
@@ -335,7 +300,6 @@ def fmt(n):
 
 
 def _parse_fecha(d):
-    """Convierte d a datetime; devuelve None si no se puede interpretar."""
     import re
     from datetime import datetime
 
@@ -383,17 +347,10 @@ def fmt_precio(n):
 
 
 def valor_total_contrato(c):
-    """Valor del paquete + transporte intermunicipal (si aplica) — es lo que
-    se muestra como 'Valor del Paquete' en el contrato impreso."""
     return (float(c.get("valor") or 0)) + (float(c.get("transporte") or 0))
 
 
 def nombre_paquete_empresa(c):
-    """Nombre comercial del paquete según la empresa del contrato.
-
-    El contrato guarda el nombre interno (el de Happy Art); Conde Eventos
-    vende los mismos paquetes con otro nombre (nombreConde), que es el que
-    el cliente vio al comprar y el que debe ir en su contrato."""
     nombre = c.get("paquete") or ""
     pk = next((p for p in PAQUETES if nombre in (p["nombre"], p.get("nombreHappy"), p.get("nombreConde"))), None)
     if not pk:
@@ -402,9 +359,6 @@ def nombre_paquete_empresa(c):
 
 
 def agrupar_items(items):
-    """['SILLA', 'SILLA', 'MESA'] -> [('SILLA', 2), ('MESA', 1)], en el orden
-    en que aparecen. Así el PDF muestra 'SILLA × 20' en una sola línea en vez
-    de 20 líneas iguales."""
     conteo = {}
     for item in items or []:
         conteo[item] = conteo.get(item, 0) + 1
@@ -418,10 +372,7 @@ def fmt_fecha_contrato(date_str):
     return f"{int(d)} DE {_MESES_LARGOS[int(m) - 1]} {y}"
 
 
-# ── Comisiones de asesores (10% del valor del paquete, sin transporte) ──────
-# Nada de esto se guarda en Firebase: se calcula al vuelo a partir de
-# state["contratos"], portado de la sección COMISIONES de legacy/js/models.js
-# y legacy/js/operations.js.
+# Comisiones de asesores
 COMISION_PORCENTAJE = 0.10
 
 
@@ -435,9 +386,6 @@ def usuario_asesor(email):
 
 
 def fecha_venta_contrato(c):
-    """Fecha en que se VENDIÓ el contrato (cuando el asesor lo registró). Si
-    algún contrato antiguo no tiene fechaRegistro, se usa la fecha del evento
-    como respaldo."""
     from datetime import datetime
 
     from app import tiempo
@@ -451,8 +399,6 @@ def fecha_venta_contrato(c):
 
 
 def fecha_evento_contrato(c):
-    """Fecha en que SE REALIZA el evento (c.fecha), distinta de la fecha de
-    venta: se usa para saber en qué mes/quincena cae el evento."""
     from datetime import datetime
 
     if c.get("fecha"):
@@ -462,13 +408,10 @@ def fecha_evento_contrato(c):
 
 
 def quincena_de_fecha(fecha):
-    """1 = evento entre el día 1 y el 14 del mes; 2 = entre el 15 y el fin."""
     return 1 if fecha.day <= 14 else 2
 
 
 def evento_realizado(c, ahora=None):
-    """¿Ya pasó la fecha del evento? Se valida contra la fecha actual,
-    comparando solo el día, para que un evento "hoy" cuente como realizado."""
     from app import tiempo
 
     f = fecha_evento_contrato(c)
@@ -483,7 +426,7 @@ def fmt_hora(time_str):
         return ""
     h, minute = time_str.split(":")[:2]
     hr = int(h)
-    # 00:xx es 12:xx AM (antes se mostraba "0:30 AM").
+    # 00:xx es 12:xx AM
     hr12 = 12 if hr == 0 else (hr - 12 if hr > 12 else hr)
     ampm = "PM" if hr >= 12 else "AM"
     return f"{hr12}:{minute} {ampm}"

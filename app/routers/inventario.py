@@ -1,7 +1,3 @@
-"""Módulo Inventario — listado con filtros/búsqueda y disponibilidad real por
-fecha (separado por contratos), más CRUD de artículos (solo admin). Portado
-de la vista view-productos y renderTabla()/openModal()/guardarProducto()/
-eliminarProducto() de legacy/js/main.js."""
 from fastapi import APIRouter, Depends, Form, Request
 
 from app import firebase, models

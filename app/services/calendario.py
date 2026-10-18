@@ -1,6 +1,3 @@
-"""Cálculos del módulo Calendario, portados de renderCalendario()/
-calVerDetalle()/renderReporteMaterialesFecha()/renderReporteProgramacionFecha()
-(sprint 3) en main.js."""
 import calendar as _cal
 from datetime import date
 
@@ -23,7 +20,6 @@ def contar_por_fecha(contratos):
 
 
 def semanas_mes(anio, mes):
-    """Devuelve una lista de semanas; cada semana es lista de (dia_o_None, fecha_str_o_None)."""
     cal = _cal.Calendar(firstweekday=6)  # domingo primero, como Date.getDay()===0
     semanas = []
     for semana in cal.monthdayscalendar(anio, mes):
@@ -38,7 +34,6 @@ def semanas_mes(anio, mes):
 
 
 def reporte_materiales_fecha(productos, eventos_dia):
-    """Devuelve (resumen: [{etiqueta, no_en_inventario, qty, stock_total, libre, agotado}], detalle_por_contrato)."""
     totales = {}
     for c in eventos_dia:
         all_items = list(c.get("descontadosPaquete") or []) + list(c.get("extras") or [])
@@ -84,8 +79,6 @@ def reporte_materiales_fecha(productos, eventos_dia):
 
 
 def reporte_programacion_fecha(personal, eventos_dia):
-    """Hoja de turno del día: eventos ordenados por hora de llegada a bodega
-    (más temprano primero), con el personal ya programado por evento."""
     def _clave_orden(c):
         mins = calc_minutos_hora_bodega(c)
         return (mins is None, mins if mins is not None else 0)

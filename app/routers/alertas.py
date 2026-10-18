@@ -1,5 +1,3 @@
-"""Módulo Alertas — artículos con stock bajo o agotado. Portado de
-renderAlertas()."""
 from fastapi import APIRouter, Depends, Request
 
 from app import firebase, models

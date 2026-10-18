@@ -1,6 +1,3 @@
-"""Módulo Préstamos — préstamo simple de un artículo y wizard de préstamo por
-paquete completo (3 pasos), portado de renderPrestamos()/guardarPrestamo()/
-loanSelectPkg()/confirmarPrestamoPaquete() en legacy/js/main.js."""
 from fastapi import APIRouter, Depends, Form, Request
 
 from app import firebase, tiempo

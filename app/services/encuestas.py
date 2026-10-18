@@ -1,6 +1,3 @@
-"""Encuestas de satisfacción — carga desde plantilla Excel (Microsoft Forms) y
-agregación por fecha, portado de cargarPlantillaEncuestas()/renderEncuestas()
-en legacy/js/main.js. Usa openpyxl en vez de SheetJS."""
 import datetime
 import io
 import time
@@ -18,12 +15,6 @@ _FORMATOS_FECHA = ("%Y-%m-%d", "%d/%m/%Y", "%m/%d/%Y", "%d-%m-%Y", "%d/%m/%y", "
 
 
 def _parse_fecha_encuesta(v):
-    """Fecha de la respuesta en formato YYYY-MM-DD, o "" si no se reconoce.
-
-    Microsoft Forms exporta la fecha como texto y casi siempre con hora
-    ("3/10/2026 14:30:22", "2026-10-03 14:30:00"). Antes esos valores se
-    guardaban tal cual y luego el dashboard fallaba (error 500) al
-    interpretarlos; ahora se toma solo la parte de la fecha."""
     if isinstance(v, (datetime.datetime, datetime.date)):
         return v.strftime("%Y-%m-%d")
     s = str(v or "").strip()
@@ -55,10 +46,6 @@ def _to_number(v):
 
 
 def parse_excel_encuestas(file_bytes):
-    """Devuelve (encuestas_nuevas: [dict,...] sin id, error: str|None, omitidas: int).
-
-    Las filas cuya fecha no se puede interpretar se omiten y se cuentan en
-    `omitidas` para avisarle al usuario."""
     omitidas = 0
     try:
         wb = openpyxl.load_workbook(io.BytesIO(file_bytes), data_only=True)
@@ -110,8 +97,6 @@ def parse_excel_encuestas(file_bytes):
 
 
 def agregar_por_fecha(encuestas, dias_filtro):
-    # Se ignoran fechas no válidas que hayan quedado guardadas por cargas
-    # anteriores, para que una sola fila mala no tumbe todo el dashboard.
     filtradas = [
         e for e in encuestas
         if e.get("fecha") and _fecha_iso_valida(e["fecha"])

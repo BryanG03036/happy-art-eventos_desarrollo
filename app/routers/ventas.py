@@ -1,12 +1,3 @@
-"""Módulo Ventas — registro de un nuevo contrato (selección de empresa,
-paquete, variantes, ítems editables del paquete, artículos adicionales y
-datos del cliente). Portado de la vista view-ventas y sus funciones en
-legacy/js/main.js + el editor de ítems del paquete y transporte del sprint 3
-(Happy Art.zip). Usa fragmentos htmx dentro de un único <form> para que la
-selección de paquete, la edición de ítems y los extras no pierdan los demás
-campos ya digitados (sin estado de sesión: todo el estado en curso viaja
-como inputs — incluidos los ocultos que llenan los fragmentos htmx — dentro
-del propio formulario)."""
 from fastapi import APIRouter, Depends, Request
 
 from app import firebase
@@ -19,8 +10,6 @@ router = APIRouter()
 
 
 def _extras_from_form(form):
-    """Reconstruye la lista de extras ya seleccionados a partir de los campos
-    ocultos extra_prodId[]/extra_qty[] que viajan repetidos en el form."""
     prod_ids = form.getlist("extra_prodId")
     qtys = form.getlist("extra_qty")
     extras = []
@@ -94,10 +83,6 @@ def ver_ventas(request: Request, user=Depends(require_asesor_o_admin), empresa: 
 async def seleccionar_paquete(request: Request, user=Depends(require_asesor_o_admin)):
     form = await request.form()
     empresa = form.get("empresa") or "happy"
-    # pkId (explícito, de un click en una tarjeta de paquete) = selección NUEVA,
-    # que reinicia los ítems editados. Si no viene, es solo un refresco (p.ej.
-    # al cambiar la fecha) del mismo paquete ya elegido (currentPkId): se
-    # conservan los ítems tal como estaban.
     pk_id_nuevo = form.get("pkId") or ""
     pk_id = pk_id_nuevo or form.get("currentPkId") or ""
     state = firebase.get_state()
@@ -142,7 +127,7 @@ async def detectar(request: Request, user=Depends(require_asesor_o_admin)):
     return templates.TemplateResponse(request, "partials/venta_paquete_panel.html", ctx)
 
 
-# ── Editor de ítems del paquete (editar texto / quitar / restablecer) ──────
+#Editor de ítems del paquete (editar texto / quitar / restablecer)
 
 @router.post("/ventas/item/editar")
 async def item_editar(request: Request, user=Depends(require_asesor_o_admin)):

@@ -57,8 +57,10 @@
           <td>{{ (m.happyN+m.condeN) or '0' }}</td>
           <td><strong>${{ fmt(m.happyV+m.condeV) }}</strong></td>
           <td>
-            <button class="btn btn-sm btn-outline-secondary" title="Editar valores manuales" data-bs-toggle="modal" data-bs-target="#modalAjuste"
-              onclick="abrirAjuste({{ anio }}, {{ i+1 }}, '{{ meses_cortos[i] }} {{ anio }}', {{ (contab_ajustes.get(anio ~ '-' ~ (i+1)) or {'happyN':0,'happyV':0,'condeN':0,'condeV':0})|tojson }})">✎</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" title="Editar valores manuales" data-bs-toggle="modal" data-bs-target="#modalAjuste"
+              data-anio="{{ anio }}" data-mes="{{ i+1 }}" data-label="{{ meses_cortos[i] }} {{ anio }}"
+              data-ajuste='{{ (contab_ajustes.get(anio ~ "-" ~ (i+1)) or {"happyN":0,"happyV":0,"condeN":0,"condeV":0})|tojson }}'
+              onclick="abrirAjuste(this)">✎</button>
           </td>
         </tr>
         {% endfor %}
@@ -107,7 +109,9 @@
   </div>
 </div>
 <script>
-function abrirAjuste(anio, mes, label, actual){
+function abrirAjuste(btn){
+  const anio = btn.dataset.anio, mes = btn.dataset.mes, label = btn.dataset.label;
+  const actual = JSON.parse(btn.dataset.ajuste);
   document.getElementById('ac_anio').value = anio;
   document.getElementById('ac_mes').value = mes;
   document.getElementById('ac_mes_label').textContent = label;

@@ -1,5 +1,3 @@
-"""Módulo Movimientos — historial de entradas/salidas/ajustes y registro de
-nuevos movimientos. Portado de renderMovimientos()/guardarMovimiento()."""
 from fastapi import APIRouter, Depends, Form, Request
 
 from app import firebase, models

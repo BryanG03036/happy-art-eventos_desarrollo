@@ -1,6 +1,3 @@
-"""Lógica del módulo Ventas (registro de contratos), portada de
-renderPaquetesGrid()/renderIncluidosList()/_pendientesVariantePaquete()/
-detectarLetrasNumero()/registrarVenta() en legacy/js/main.js."""
 import re
 import time
 
@@ -15,15 +12,14 @@ class ValidationError(Exception):
 
 
 CATEGORIAS_PAQUETE = [
-    {"id": "cumpleanos", "label": "🎂 Cumpleaños"},
-    {"id": "baby_shower", "label": "👶 Baby Shower"},
-    {"id": "revelacion", "label": "🎀 Revelación de Género"},
-    {"id": "personalizado", "label": "✨ Personalizado"},
+    {"id": "cumpleanos", "label": "Cumpleaños"},
+    {"id": "baby_shower", "label": "Baby Shower"},
+    {"id": "revelacion", "label": "Revelación de Género"},
+    {"id": "personalizado", "label": "Personalizado"},
 ]
 
 
 def _cupos(form, campo):
-    """Cantidad de personal requerido por rol: entero >= 0."""
     try:
         return entero(form.get(campo), "Personal necesario", minimo=0)
     except NumeroInvalido as e:
@@ -81,7 +77,6 @@ def _norm_letras(s):
 
 
 def detectar_letras_numero(productos, pk, festejado, anios):
-    """Devuelve (extras_auto: [{prodId, qty}], mensajes: [str], faltantes: [str])."""
     if not pk:
         return [], [], []
     extras_auto = {}

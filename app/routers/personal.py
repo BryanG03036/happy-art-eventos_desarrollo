@@ -1,6 +1,3 @@
-"""Módulo Personal (admin) — CRUD de staff operativo y disponibilidad por
-fecha. Portado de la vista view-personal y sus funciones en main.js
-(sprint 3: incluye el rol "asesor", vista agrupada por rol con buscador)."""
 from fastapi import APIRouter, Depends, Form, Request
 
 from app import firebase

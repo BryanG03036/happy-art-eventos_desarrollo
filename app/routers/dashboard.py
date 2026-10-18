@@ -1,6 +1,3 @@
-"""Dashboard (solo admin) — estadísticas generales, contabilidad de ventas por
-año/mes (con ajustes manuales) y encuestas de satisfacción. Portado de
-renderDashboard()/renderContabilidad()/renderEncuestas() en main.js."""
 import csv
 import io
 
@@ -77,9 +74,17 @@ def exportar_csv(anio: int, user=Depends(require_admin)):
 
 @router.post("/dashboard/contabilidad/ajuste")
 def guardar_ajuste(request: Request, user=Depends(require_admin),
-                    anio: int = Form(...), mes: int = Form(...),
+                    anio: str = Form(""), mes: str = Form(""),
                     happyN: str = Form("0"), happyV: str = Form("0"),
                     condeN: str = Form("0"), condeV: str = Form("0")):
+    try:
+        anio = models.entero(anio, "Año", minimo=2000, defecto=None)
+        mes = models.entero(mes, "Mes", minimo=1, defecto=None)
+        if anio is None or mes is None or mes > 12:
+            raise models.NumeroInvalido("Mes no válido.")
+    except models.NumeroInvalido:
+        request.session["flash"] = {"type": "danger", "text": "No se pudo identificar el mes del ajuste. Vuelve a intentarlo."}
+        return redirect_to("/dashboard")
     state = firebase.get_state()
     try:
         hn = models.entero(happyN, "Eventos Happy Art", minimo=0)
@@ -123,7 +128,7 @@ async def cargar_encuestas(request: Request, user=Depends(require_admin), archiv
         state["nextEncuestaId"] += 1
         state["encuestas"].append(e)
     firebase.save_state(state)
-    texto = f"✅ {len(nuevas)} encuesta(s) importada(s)"
+    texto = f" {len(nuevas)} encuesta(s) importada(s)"
     if omitidas:
         texto += f" · {omitidas} fila(s) omitida(s) por fecha no válida"
     request.session["flash"] = {"type": "success" if not omitidas else "warning", "text": texto}

@@ -1,8 +1,3 @@
-"""CRUD de inventario y registro de movimientos/préstamos, portado de las
-funciones guardarProducto/eliminarProducto/guardarMovimiento/guardarPrestamo/
-devolverPrestamo de legacy/js/main.js. Cada función recibe el `state` completo
-(dict con las listas ya cargadas desde Firebase) y lo muta en memoria; quien
-llama es responsable de firebase.save_state(state) después."""
 import time
 
 from app.models import NumeroInvalido, entero
@@ -47,7 +42,6 @@ def _norm_sku(sku):
 
 
 def _sku_en_uso(state, sku, excluir_id=None):
-    """¿Otro artículo (distinto de excluir_id) ya usa este código?"""
     clave = _norm_sku(sku)
     return any(_norm_sku(p["sku"]) == clave and p["id"] != excluir_id for p in state["productos"])
 
@@ -124,8 +118,6 @@ def eliminar_producto(state, id_):
     state["movimientos"] = [m for m in state["movimientos"] if m["prodId"] != id_]
 
 
-# Tipos que se registran desde Movimientos. "prestamo" y "devolucion" solo
-# los genera el módulo Préstamos (que descuenta y repone el stock).
 TIPOS_MOVIMIENTO = ("entrada", "salida", "ajuste")
 
 

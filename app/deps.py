@@ -1,7 +1,3 @@
-"""Dependencias compartidas de FastAPI: plantillas Jinja2 y control de acceso
-por sesión (equivalente a onAuthStateChanged + obtenerRol() del SPA original,
-pero verificado en el servidor en cada request en vez de mantenerse en el
-cliente)."""
 from fastapi import HTTPException, Request
 from fastapi.templating import Jinja2Templates
 from starlette.responses import RedirectResponse
@@ -40,7 +36,6 @@ class RedirectToLogin(Exception):
 
 
 def get_current_user(request: Request):
-    """Lee el usuario de la sesión (cookie firmada). None si no hay sesión."""
     return request.session.get("user")
 
 
@@ -48,7 +43,6 @@ PAGINA_INICIO = {"admin": "/dashboard", "asesor": "/ventas", "bodega": "/inventa
 
 
 def pagina_inicio(user) -> str:
-    """Vista inicial de cada rol (la misma a la que lleva el login)."""
     return PAGINA_INICIO.get((user or {}).get("role"), "/login")
 
 

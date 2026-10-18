@@ -1,8 +1,3 @@
-"""Wizard de préstamo por paquete (3 pasos), portado de loanSelectPkg()/
-renderLoanStep2()/confirmarPrestamoPaquete() en legacy/js/main.js. El borrador
-en curso se guarda en la sesión del servidor (equivalente a las variables
-loanPkgId/loanReturnItems/loanConsumeItems/loanExtrasSelected en memoria del
-navegador), ya que aquí no hay estado persistente de cliente."""
 import time
 
 from app.models import PAQUETES, is_consumable
@@ -15,9 +10,9 @@ class ValidationError(Exception):
 
 
 CATEGORIAS_PAQUETE = [
-    {"id": "cumpleanos", "label": "🎂 Cumpleaños"},
-    {"id": "baby_shower", "label": "👶 Baby Shower"},
-    {"id": "revelacion", "label": "🎀 Revelación de Género"},
+    {"id": "cumpleanos", "label": "Cumpleaños"},
+    {"id": "baby_shower", "label": "Baby Shower"},
+    {"id": "revelacion", "label": "Revelación de Género"},
 ]
 
 
@@ -67,7 +62,7 @@ def confirmar(state, draft, coordinador, cliente, fecha_evento, retorno, nota):
                   if it["necesitaVariante"] and not any(l["prodId"] for l in it["seleccionesVariante"])]
     if pendientes:
         nombres = ", ".join(it["name"] for it in pendientes[:3])
-        raise ValidationError(f"⚠️ Falta elegir el tipo específico de: {nombres}")
+        raise ValidationError(f"Falta elegir el tipo específico de: {nombres}")
 
     pk = next((p for p in PAQUETES if p["id"] == draft["pkId"]), None)
     evento_ref = f"{pk['nombre'] if pk else 'Evento'} · {cliente}"

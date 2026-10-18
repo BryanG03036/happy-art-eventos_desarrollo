@@ -1,7 +1,3 @@
-"""Comisiones de asesores: vista de solo lectura con las comisiones semanales
-del asesor con sesión iniciada, el ranking competitivo del mes (visible para
-asesor y admin) y, solo para admin, la validación de quincenas ya realizadas.
-Portado de la vista COMISIONES de legacy/js/main.js e index.html."""
 from fastapi import APIRouter, Depends, Request
 
 from app import firebase, models, tiempo

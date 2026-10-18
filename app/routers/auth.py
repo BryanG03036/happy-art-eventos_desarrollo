@@ -1,8 +1,3 @@
-"""Login/logout — equivalente a hacerLogin()/onAuthStateChanged() del SPA
-original (js/main.js), ahora verificado en el servidor: se valida el
-correo/contraseña contra Firebase Authentication (API REST de Identity
-Toolkit) y se resuelve el rol con obtener_rol() del mismo modo que hacía el
-cliente."""
 from fastapi import APIRouter, Form, Request
 from fastapi.responses import RedirectResponse
 
