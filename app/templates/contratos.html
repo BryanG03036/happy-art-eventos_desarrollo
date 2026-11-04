@@ -64,6 +64,11 @@
 {% endfor %}
 
 {% if recien_creado %}
-<script>window.open('/contratos/{{ recien_creado }}/pdf', '_blank');</script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  var btn = document.querySelector('.border-warning a[href*="/pdf"]');
+  if (btn) btn.scrollIntoView({behavior: 'smooth', block: 'center'});
+});
+</script>
 {% endif %}
 {% endblock %}
