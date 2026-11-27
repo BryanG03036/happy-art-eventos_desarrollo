@@ -18,138 +18,55 @@ cambia es la arquitectura:
   requerimientos no funcionales), solo que ahora ocurre en el servidor en
   vez del navegador.
 
-## Qué se mantiene y qué cambia
+## Despliegue en AWS (infraestructura como código)
 
-- ✅ **Se mantiene Firebase Realtime Database** como almacén de datos —
-  accedido desde el servidor con el SDK de administrador
-  (`firebase_admin`), no desde el navegador.
-- ✅ **Se mantiene Firebase Authentication** para el login — las
-  credenciales se verifican en el servidor contra la API REST de Identity
-  Toolkit (el SDK de administrador no puede verificar contraseñas
-  directamente, solo tokens ya emitidos).
-- ⚠️ **Se pierde la sincronización en tiempo real entre usuarios.** Antes,
-  si dos personas tenían la app abierta, los cambios de una aparecían
-  instantáneamente en la pantalla de la otra. Ahora cada quien ve los
-  cambios de los demás al recargar o navegar a otra página. No hay
-  WebSockets ni actualización automática en segundo plano.
-- 🎨 El diseño visual cambia a Bootstrap 5 (ya no es un calco pixel-perfect
-  del original) — la funcionalidad es la misma, el aspecto es distinto.
+El despliegue en producción se hace con Terraform, en la carpeta
+[`infra/`](infra/) (ver su propio README para el detalle completo). En
+resumen, Terraform crea:
 
-## Estructura del proyecto
-
-```
-app/
-  main.py          — punto de entrada FastAPI, registra todos los routers
-  config.py        — configuración leída de variables de entorno
-  firebase.py       — acceso a Realtime Database + verificación de login
-  models.py         — helpers de dominio puros (portados de legacy/js/models.js)
-  deps.py           — plantillas Jinja2 + control de acceso por sesión
-  data/catalog.json — catálogos (paquetes, roles, etc.) extraídos del original
-  routers/          — un router por módulo (auth, dashboard, inventario, ventas, ...)
-  services/         — lógica de negocio de cada módulo (sin FastAPI ni Jinja2)
-  templates/        — plantillas Jinja2 (con Bootstrap 5 + htmx para partes interactivas)
-  static/           — CSS propio, logos usados en el PDF de contrato
-legacy/              — la SPA original completa, conservada como referencia
-requirements.txt
-```
-
-## Desarrollo local
+- Una instancia EC2 `t3.micro` (Ubuntu 22.04) con Nginx como reverse proxy
+  delante de la app FastAPI (Uvicorn + systemd).
+- Un bucket S3 privado donde se sube el `.zip` con el código de la app, que
+  la instancia descarga y despliega sola al arrancar.
+- Un Security Group que solo abre los puertos 80 y 443 — no hay SSH
+  abierto; el acceso administrativo es por AWS Systems Manager (SSM Session
+  Manager).
+- Una IP elástica fija, para que no cambie si la instancia se reinicia.
 
 ```bash
-python3 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+cd infra
+cp terraform.tfvars.example terraform.tfvars
+# editar terraform.tfvars con los valores reales (nunca subirlo a git)
+
+terraform init
+terraform plan
+terraform apply
 ```
 
-Variables de entorno necesarias (ver `app/config.py` para la lista completa
-y sus valores por defecto):
+Al terminar, `terraform output public_ip` da la IP pública para abrir
+`http://<public_ip>/login`.
 
-- `FIREBASE_SERVICE_ACCOUNT_JSON` (o `FIREBASE_SERVICE_ACCOUNT_FILE`) —
-  **obligatoria**. Ver la sección siguiente para generarla.
-- `SESSION_SECRET_KEY` — clave para firmar la cookie de sesión. En local
-  puede omitirse (usa un valor de desarrollo), pero **debe** configurarse en
-  producción.
-- El resto (`FIREBASE_API_KEY`, `FIREBASE_DATABASE_URL`, etc.) ya tienen el
-  valor del proyecto Firebase original como valor por defecto — normalmente
-  no hace falta tocarlas a menos que se use otro proyecto de Firebase.
+### Limitaciones conocidas de este despliegue
 
-```bash
-uvicorn app.main:app --reload
-```
-
-Abrir `http://localhost:8000`.
-
-### Cómo generar la cuenta de servicio de Firebase
-
-Este paso **debe hacerlo un administrador del proyecto de Firebase** — no es
-algo que se pueda generar automáticamente:
-
-1. Entrar a la [consola de Firebase](https://console.firebase.google.com/),
-   abrir el proyecto (`inventario-4c0fd`).
-2. **Configuración del proyecto** (ícono de engranaje) → pestaña **Cuentas
-   de servicio**.
-3. Click en **Generar nueva clave privada** → confirma → se descarga un
-   archivo `.json`.
-4. En local: guardarlo en el proyecto (fuera de git) y apuntar
-   `FIREBASE_SERVICE_ACCOUNT_FILE` a esa ruta.
-5. En Render (o cualquier hosting): pegar el **contenido completo** de ese
-   archivo `.json` como valor de la variable de entorno
-   `FIREBASE_SERVICE_ACCOUNT_JSON` (una sola línea).
-
-⚠️ Este archivo es secreto — nunca debe subirse al repositorio.
-
-## Despliegue en Render (plan gratuito)
-
-1. Crear un **Web Service** nuevo en Render, apuntando a este repositorio.
-2. **Build command**: `pip install -r requirements.txt`
-3. **Start command**: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-4. Variables de entorno a configurar en Render (pestaña *Environment*):
-   - `FIREBASE_SERVICE_ACCOUNT_JSON` — el contenido del JSON de la cuenta de
-     servicio (ver arriba).
-   - `SESSION_SECRET_KEY` — un valor aleatorio largo (por ejemplo,
-     `python3 -c "import secrets;print(secrets.token_hex(32))"`).
-   - `ENVIRONMENT=production`
-5. Render detecta el `$PORT` automáticamente; no hace falta configurarlo a
-   mano, solo usarlo en el start command como arriba.
-
-### Limitaciones del plan gratuito a tener en cuenta
-
-- El servicio se "duerme" tras ~15 minutos sin tráfico y la primera
-  petición después de eso tarda varios segundos en responder (cold start).
+- Todavía no hay HTTPS: mientras no haya un dominio apuntando a la IP
+  elástica, no se puede emitir un certificado y la app queda accesible solo
+  por `http://`.
+- No hay redeploy automático: un cambio de código requiere generar de
+  nuevo el `.zip` y volver a aplicar Terraform (ver `infra/README.md`).
 - Sigue aplicando la limitación ya mencionada de que **no hay
   sincronización en tiempo real** entre usuarios — cada quien ve los
   cambios de los demás al recargar.
 
 ## Pruebas
 
-Las pruebas nunca tocan el Firebase real: `tests/fake_firebase.py` sustituye
+No hay una base de datos Firebase real disponible en este entorno de
+desarrollo — para probar los flujos completos (login, CRUD, generación de
+PDF, etc.) sin depender de credenciales reales, se puede sustituir
 `app.firebase.get_state`/`save_state`/`sign_in_with_password`/
-`verify_id_token` por versiones en memoria con un conjunto fijo de datos de
-prueba (productos, contratos de Happy Art y Conde Eventos, personal con y
-sin disponibilidad).
-
-```bash
-pip install -r requirements-dev.txt
-python -m pytest            # casos CP-01..CP-15 del plan + regresión de defectos
-```
-
-- `tests/test_casos_prueba.py` — los 15 casos de la sección 5 del Plan de
-  Pruebas, uno o más tests por caso.
-- `tests/test_defectos.py` — regresión de cada defecto encontrado (DEF-xx);
-  el ID del defecto aparece en el nombre de la prueba y en el commit que lo
-  corrigió.
-- La fecha "de hoy" se congela en el 7 de octubre de 2026 (ciclo de pruebas)
-  para que comisiones, quincenas y calendario den siempre el mismo resultado.
-
-Pruebas manuales en el navegador con los mismos datos:
-
-```bash
-python -m tests.servidor_pruebas      # http://127.0.0.1:8000
-```
-
-Usuarios de prueba (contraseña `prueba123`): `admin@happyarteventos.com`,
-`brayang@asesoreventos.com` y `eduardv@asesoreventos.com` (asesores),
-`jennyer@happyarteventos.com` (bodega). `POST /__pruebas/reiniciar` vuelve a
-los datos iniciales (solo existe en el servidor de pruebas).
+`verify_id_token` por versiones en memoria, como se hizo durante el
+desarrollo de este puerto. La lógica de negocio pura vive en `app/services/`
+y `app/models.py`, sin dependencias de FastAPI ni Firebase, por lo que
+también se puede probar de forma aislada.
 
 ### Zona horaria
 
